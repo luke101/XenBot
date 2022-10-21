@@ -341,7 +341,7 @@ namespace XenBot
                     }
 
                     RefreshGrid();
-                    RefreshTotal();
+                    LoadTotals();
                     accountId++;
                 }
             }
