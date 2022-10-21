@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -73,6 +74,35 @@ namespace XenBot.DataControllers
             }
 
             return accounts;
+        }
+
+        public Dictionary<string, int> AggregateAccountsByChain()
+        {
+            Dictionary<string, int> chainDict = new Dictionary<string, int>();
+
+            using (SqliteConnection conn = new SqliteConnection(string.Format("Data Source={0};", _dbFileName)))
+            {
+                conn.Open();
+
+                string statement = "select chain, count(*) as count from data group by chain";
+
+                using (SqliteCommand command = new SqliteCommand(statement, conn))
+                {
+
+                    using (SqliteDataReader reader = command.ExecuteReader())
+                    {
+                        int chainOrdinal = reader.GetOrdinal("chain");
+                        int countOrdinal = reader.GetOrdinal("count");
+
+                        while (reader.Read())
+                        {
+                            chainDict[reader.GetString(chainOrdinal)] = reader.GetInt32(countOrdinal);
+                        }
+                    }
+                }
+            }
+
+            return chainDict;
         }
 
         public void CreateDFile()

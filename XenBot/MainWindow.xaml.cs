@@ -92,7 +92,16 @@ namespace XenBot
             Setup();
             RefreshGrid();
             RefreshTotal();
+            LoadTotals();
             CancelBtn.IsEnabled = false;
+        }
+
+        private void LoadTotals()
+        {
+            var totals = _dataController.AggregateAccountsByChain();
+
+            ETHTOT.Text = totals.ContainsKey("ETH") ? totals["ETH"].ToString() : "0";
+            BSCTOT.Text = totals.ContainsKey("BSC") ? totals["BSC"].ToString() : "0";
         }
 
         private async Task LoadInfo()
@@ -137,9 +146,9 @@ namespace XenBot
 
         private void RefreshTotal()
         {
-            var total = _dataController.GetTotalClaims();
+            //var total = _dataController.GetTotalClaims();
 
-            TotalMints.Text = total.ToString();
+            //TotalMints.Text = total.ToString();
         }
 
         private void RefreshGrid()
@@ -227,8 +236,6 @@ namespace XenBot
 
                 int accountId = 0;
 
-                bool done = false;
-
                 int termDays = 0;
 
                 string chain = _blockchainController.ChainName;
@@ -260,7 +267,7 @@ namespace XenBot
 
                 Nethereum.Web3.Accounts.Account mainAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(0).PrivateKey);
 
-                while (!done || accountId <= 2)
+                while (true)
                 {
                     if(cancelPressed == true)
                     {
@@ -273,9 +280,30 @@ namespace XenBot
                     //Does not have a rank
                     if (HasClaimedRank(accountId, userMintResult) == false)
                     {
-                        GasPrice gasPrice = await _blockchainController.EstimateGasPriceAsync(_priorityFee);
-                        BigInteger claimRankGas = await _xenBlockchainController.EstimateGasToClaim(mintAccount.Address, termDays);
-                        BigInteger claimRankTransactionFee = gasPrice.Priority * claimRankGas;
+                        GasPrice gasPrice;
+                        BigInteger claimRankGas = 0;
+                        BigInteger claimRankTransactionFee = 0;
+                        
+                        while (true)
+                        {
+                            gasPrice = await _blockchainController.EstimateGasPriceAsync(_priorityFee);
+                            claimRankGas = await _xenBlockchainController.EstimateGasToClaim(mintAccount.Address, termDays);
+                            claimRankTransactionFee = gasPrice.Priority * claimRankGas;
+
+                            var maxFeeWillingToPay = Web3.Convert.ToWei((decimal.Parse(MaxGasCost.Text) / _price));
+
+                            if(maxFeeWillingToPay > claimRankTransactionFee)
+                            {
+                                break;
+                            }
+                            
+                            await Task.Delay(3500);
+
+                            if (cancelPressed == true)
+                            {
+                                return;
+                            }
+                        }
 
                         if (cancelPressed == true)
                         {
@@ -287,15 +315,16 @@ namespace XenBot
                         var transferFee = gasPrice.Priority * transferGas;
                         var claimFee = gasPrice.Priority * claimRankGas;
                         var transferAmount = transferFee + claimFee;
+
                         if (seedAccountBalance <= transferAmount)
                         {
-                            MessageBox.Show("Done");
+                            MessageBox.Show("Done - ran out of money");
                             break;
                         }
 
                         var mintAccountBalance = await _blockchainController.Getbalance(mintAccount.Address);
                         BigInteger amountToSend = mintAccountBalance >= claimRankTransactionFee ? new BigInteger(0) : claimRankTransactionFee - mintAccountBalance;
-
+                        
                         await SendMoneyToMintAccount(accountId, _wallet, amountToSend);
                         await ClaimRank(accountId, _wallet, claimRankGas, termDays);
 
