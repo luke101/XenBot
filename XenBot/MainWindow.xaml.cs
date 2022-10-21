@@ -93,7 +93,6 @@ namespace XenBot
             RefreshGrid();
             RefreshTotal();
             CancelBtn.IsEnabled = false;
-            //
         }
 
         private async Task LoadInfo()
