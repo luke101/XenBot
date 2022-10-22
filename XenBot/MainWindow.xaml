@@ -24,11 +24,11 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <TextBlock Text="Blockchain:" Margin="0 0 5 5" FontFamily="Arial Black" Foreground="Gray" FontSize="16" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="0" />
-                <ComboBox Name="cbBlockChain" HorizontalAlignment="Left" Margin="0 0 0 5" VerticalAlignment="Center" Grid.Column="1" Width="150" SelectionChanged="cbBlockChain_SelectionChanged">
-                    <ComboBoxItem Content="Ethereum" />
+                <ComboBox Name="cbBlockChain" HorizontalAlignment="Left" Margin="0 0 0 5" VerticalAlignment="Center" Grid.Column="1" Width="150" DropDownClosed="cbBlockChain_DropDownClosed">
+                    <ComboBoxItem Content="ETH" />
                     <ComboBoxItem IsSelected="true" Content="BSC" />
-                    <ComboBoxItem Content="Polygon" />
-                    <ComboBoxItem Content="EthPow" />
+                    <ComboBoxItem Content="MATIC" />
+                    <ComboBoxItem Content="ETHPOW" />
                     <ComboBoxItem Content="Avalanche" />
                 </ComboBox>
                 <TextBlock Text="Balance:" Margin="0 0 5 5" HorizontalAlignment="Right" VerticalAlignment="Center" FontFamily="Arial Black" Foreground="Gray" FontSize="16" Grid.Row="1" Grid.Column="0" />
@@ -107,9 +107,11 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <Button x:Name="ClaimRankBtn" Content="Claim Rank Till Exhausted" Margin="0 0 5 0" Grid.Column="0" Click="Button_Click_2" />
                     <Button x:Name="CancelBtn" Content="Cancel" Grid.Column="1" Margin="0 0 5 0" Click="Button_Click_3" />
+                    <Button x:Name="btnGetExistingAccounts" Content="Get Existing Wallets" Grid.Column="2" Margin="0 0 0 0" Click="btnGetExistingAccounts_Click" />
                     <!--<Button x:Name="BackUpBtn" Content="Back Up Data" Grid.Column="2" Click="BackUpBtn_Click" />-->
                 </Grid>
                 <DataGrid x:Name="AccountsGrid" Grid.Column="0" Grid.Row="7" CanUserSortColumns="True" AutoGenerateColumns="False" IsReadOnly="True" Grid.ColumnSpan="2">

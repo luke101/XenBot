@@ -84,17 +84,20 @@ namespace XenBot
         private async void MainLoaded(object sender, RoutedEventArgs e)
         {
             LoadFactories();
-
+            _dataController.AccountAdded += _dataController_AccountAdded;
+            _dataController.AccountUpdated += _dataController_AccountUpdated;
+            _dataController.AccountDeleted += _dataController_AccountDeleted;
             AccountsGrid.ItemsSource = _accountsDG;
             InfuraUrl.Text = "https://bsc-dataseed.binance.org/";
             LoadWallet();
             await LoadInfo();
             Setup();
             RefreshGrid();
-            RefreshTotal();
             LoadTotals();
             CancelBtn.IsEnabled = false;
         }
+
+        
 
         private void LoadTotals()
         {
@@ -144,43 +147,22 @@ namespace XenBot
             MaxGasCost.Text = price;
         }
 
-        private void RefreshTotal()
-        {
-            //var total = _dataController.GetTotalClaims();
-
-            //TotalMints.Text = total.ToString();
-        }
-
         private void RefreshGrid()
         {
-            AccountsGrid.Items.Refresh();
+            _accountsDG.Clear();
 
-            List<Entities.Account> accounts = _dataController.GetAccounts();
-
-            int accountDGCount = _accountsDG.Count;
-
+            List<Entities.Account> accounts = _dataController.GetAccountsByChain(cbBlockChain.Text);
+            
             for(int x = 0; x < accounts.Count; x++)
             {
-                if(x + 1 > accountDGCount)
-                {
-                    AccountDG accountDG = new AccountDG();
-                    accountDG.AccountId = accounts[x].AccountId;
-                    accountDG.ClaimExpire = accounts[x].ClaimExpire;
-                    accountDG.StakeExpire = accounts[x].StakeExpire;
-                    accountDG.Address = accounts[x].Address;
-                    accountDG.DaysLeft = accounts[x].DaysLeft;
-                    accountDG.Chain = accounts[x].Chain;
-                    _accountsDG.Add(accountDG);
-                }
-                else
-                {
-                    _accountsDG[x].AccountId = accounts[x].AccountId;
-                    _accountsDG[x].ClaimExpire = accounts[x].ClaimExpire;
-                    _accountsDG[x].StakeExpire = accounts[x].StakeExpire;
-                    _accountsDG[x].Address = accounts[x].Address;
-                    _accountsDG[x].DaysLeft = accounts[x].DaysLeft;
-                    _accountsDG[x].Chain = accounts[x].Chain;
-                }
+                AccountDG accountDG = new AccountDG();
+                accountDG.AccountId = accounts[x].AccountId;
+                accountDG.ClaimExpire = accounts[x].ClaimExpire;
+                accountDG.StakeExpire = accounts[x].StakeExpire;
+                accountDG.Address = accounts[x].Address;
+                accountDG.DaysLeft = accounts[x].DaysLeft;
+                accountDG.Chain = accounts[x].Chain;
+                _accountsDG.Add(accountDG);
             }
         }
 
@@ -251,7 +233,6 @@ namespace XenBot
                     return;
                 }
 
-
                 decimal maxClaimRankGasInDollars = 0;
 
                 if (string.IsNullOrWhiteSpace(MaxGasCost.Text) || decimal.TryParse(MaxGasCost.Text, out maxClaimRankGasInDollars) == false)
@@ -274,75 +255,80 @@ namespace XenBot
                         return;
                     }
 
-                    Nethereum.Web3.Accounts.Account mintAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(accountId).PrivateKey);
-                    var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
+                    var accountfromDB = _dataController.GetAccountByIdAndChain(accountId, _blockchainController.ChainName);
 
-                    //Does not have a rank
-                    if (HasClaimedRank(accountId, userMintResult) == false)
+                    if (accountfromDB == null)
                     {
-                        GasPrice gasPrice;
-                        BigInteger claimRankGas = 0;
-                        BigInteger claimRankTransactionFee = 0;
-                        
-                        while (true)
+                        Nethereum.Web3.Accounts.Account mintAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(accountId).PrivateKey);
+                        var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
+
+                        //Does not have a rank
+                        if (HasClaimedRank(accountId, userMintResult) == false)
                         {
-                            gasPrice = await _blockchainController.EstimateGasPriceAsync(_priorityFee);
-                            claimRankGas = await _xenBlockchainController.EstimateGasToClaim(mintAccount.Address, termDays);
-                            claimRankTransactionFee = gasPrice.Priority * claimRankGas;
+                            GasPrice gasPrice;
+                            BigInteger claimRankGas = 0;
+                            BigInteger claimRankTransactionFee = 0;
 
-                            var maxFeeWillingToPay = Web3.Convert.ToWei((decimal.Parse(MaxGasCost.Text) / _price));
-
-                            if(maxFeeWillingToPay > claimRankTransactionFee)
+                            while (true)
                             {
-                                break;
+                                gasPrice = await _blockchainController.EstimateGasPriceAsync(_priorityFee);
+                                claimRankGas = await _xenBlockchainController.EstimateGasToClaim(mintAccount.Address, termDays);
+                                claimRankTransactionFee = gasPrice.Priority * claimRankGas;
+
+                                var maxFeeWillingToPay = Web3.Convert.ToWei((decimal.Parse(MaxGasCost.Text) / _price));
+
+                                if (maxFeeWillingToPay > claimRankTransactionFee)
+                                {
+                                    break;
+                                }
+
+                                await Task.Delay(3500);
+
+                                if (cancelPressed == true)
+                                {
+                                    return;
+                                }
                             }
-                            
-                            await Task.Delay(3500);
 
                             if (cancelPressed == true)
                             {
                                 return;
                             }
-                        }
 
-                        if (cancelPressed == true)
+                            var seedAccountBalance = await _blockchainController.Getbalance(mainAccount.Address);
+                            BigInteger transferGas = await _blockchainController.EstimateCoinTransferGas(mainAccount.Address, mintAccount.Address, claimRankGas);
+                            var transferFee = gasPrice.Priority * transferGas;
+                            var claimFee = gasPrice.Priority * claimRankGas;
+                            var transferAmount = transferFee + claimFee;
+
+                            if (seedAccountBalance <= transferAmount)
+                            {
+                                MessageBox.Show("Done - ran out of money");
+                                break;
+                            }
+
+                            var mintAccountBalance = await _blockchainController.Getbalance(mintAccount.Address);
+                            BigInteger amountToSend = mintAccountBalance >= claimRankTransactionFee ? new BigInteger(0) : claimRankTransactionFee - mintAccountBalance;
+
+                            await SendMoneyToMintAccount(accountId, _wallet, amountToSend);
+                            await ClaimRank(accountId, _wallet, claimRankGas, termDays);
+
+                            DateTime claimExpire = DateTime.UtcNow.AddDays(termDays);
+                            string address = _wallet.GetAccount(accountId).Address;
+                            _dataController.UpdateClaimInDB(accountId, claimExpire, address, chain);
+                        }
+                        else
                         {
-                            return;
+                            var term = userMintResult.Term;
+                            var matureDate = UnixTimeStampToDateTime((long)userMintResult.MaturityTs);
+                            var address = userMintResult.Address;
+                            _dataController.UpdateClaimInDB(accountId, matureDate, address, chain);
                         }
 
-                        var seedAccountBalance = await _blockchainController.Getbalance(mainAccount.Address);
-                        BigInteger transferGas = await _blockchainController.EstimateCoinTransferGas(mainAccount.Address, mintAccount.Address, claimRankGas);
-                        var transferFee = gasPrice.Priority * transferGas;
-                        var claimFee = gasPrice.Priority * claimRankGas;
-                        var transferAmount = transferFee + claimFee;
-
-                        if (seedAccountBalance <= transferAmount)
-                        {
-                            MessageBox.Show("Done - ran out of money");
-                            break;
-                        }
-
-                        var mintAccountBalance = await _blockchainController.Getbalance(mintAccount.Address);
-                        BigInteger amountToSend = mintAccountBalance >= claimRankTransactionFee ? new BigInteger(0) : claimRankTransactionFee - mintAccountBalance;
-                        
-                        await SendMoneyToMintAccount(accountId, _wallet, amountToSend);
-                        await ClaimRank(accountId, _wallet, claimRankGas, termDays);
-
-                        DateTime claimExpire = DateTime.UtcNow.AddDays(termDays);
-                        string address = _wallet.GetAccount(accountId).Address;
-                        UpdateClaimInDB(accountId, claimExpire, address, chain);
-                    }
-                    else
-                    {
-                        var term = userMintResult.Term;
-                        var matureDate = UnixTimeStampToDateTime((long)userMintResult.MaturityTs);
-                        var address = userMintResult.Address;
-                        UpdateClaimInDB(accountId, matureDate, address, chain);
+                        LoadTotals();
                     }
 
-                    RefreshGrid();
-                    LoadTotals();
-                    accountId++;
+                accountId++;
                 }
             }
             catch(Exception ex)
@@ -357,27 +343,49 @@ namespace XenBot
             }
         }
 
-        private void UpdateClaimInDB(int accountId, DateTime claimExpire, string address, string chain)
+        private void _dataController_AccountAdded(object? sender, AccountEventArg e)
         {
-            _dataController.UpdateClaimInDB(accountId, claimExpire, address, chain);
+            AddAccountToGrid(e.Account);
         }
 
-        //private void UpdateAccountBalanceInDB(int accountId, decimal amountToSend)
-        //{
-        //    using(SqliteConnection conn = new SqliteConnection(string.Format("Data Source={0};Version=3;", dbFileName)))
-        //    {
-        //        conn.Open();
+        private void _dataController_AccountUpdated(object? sender, AccountEventArg e)
+        {
+            UpdateAccountToGrid(e.Account);
+        }
 
-        //        string statement = "insert or replace into data (id, balance) values (select @id, @balance)";
+        private void _dataController_AccountDeleted(object? sender, AccountEventArg e)
+        {
+            
+        }
 
-        //        using (SqliteCommand command = new SqliteCommand(statement, conn))
-        //        {
-        //            command.Parameters.AddWithValue("@id", accountId);
-        //            command.Parameters.AddWithValue("@balance", Web3.Convert.FromWei(new BigInteger(amountToSend)));
-        //            command.ExecuteNonQuery();
-        //        }
-        //    }
-        //}
+        private void UpdateAccountToGrid(Entities.Account account)
+        {
+            AccountDG dgObj = _accountsDG.FirstOrDefault(x => x.AccountId == account.AccountId && x.Chain == account.Chain);
+
+            if(dgObj != null)
+            {
+                dgObj.Address = account.Address;
+                dgObj.AccountId = account.AccountId;
+                dgObj.Chain = account.Chain;
+                dgObj.ClaimExpire = account.ClaimExpire;
+                dgObj.DaysLeft = account.DaysLeft;
+            }
+            else
+            {
+                AddAccountToGrid(account);
+            }
+        }
+
+        private void AddAccountToGrid(Entities.Account account)
+        {
+            AccountDG dgObj = new AccountDG();
+            dgObj.Address = account.Address;
+            dgObj.AccountId = account.AccountId;
+            dgObj.Chain = account.Chain;
+            dgObj.ClaimExpire = account.ClaimExpire;
+            dgObj.DaysLeft = account.DaysLeft;
+            _accountsDG.Add(dgObj);
+        }
 
         private void EnableApp(bool isEnabled)
         {
@@ -387,6 +395,7 @@ namespace XenBot
             Address.IsEnabled = isEnabled;
             TermDays.IsEnabled = isEnabled;
             ClaimRankBtn.IsEnabled = isEnabled;
+            cbBlockChain.IsEnabled = isEnabled;
         }
 
         private bool HasClaimedRank(int accountId, UserMintOutputDTO userMintResult)
@@ -439,20 +448,6 @@ namespace XenBot
             }
         }
 
-        private async void cbBlockChain_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (IsLoaded)
-            {
-                LoadFactories();
-                await LoadInfo();
-            }
-        }
-
-        //private void cbPriorityFee_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        //{
-            
-        //}
-
         private void cbPriorityFee_DropDownClosed(object sender, EventArgs e)
         {
             if (IsLoaded)
@@ -461,19 +456,82 @@ namespace XenBot
             }
         }
 
-        //private void BackUpBtn_Click(object sender, RoutedEventArgs e)
-        //{
-        //    var accounts = _dataController.GetAccounts();
+        private async void cbBlockChain_DropDownClosed(object sender, EventArgs e)
+        {
+            if (IsLoaded)
+            {
+                LoadFactories();
+                RefreshGrid();
+                await LoadInfo();
+            }
+        }
 
-        //    List<string> lines = new List<string>();
+        private async void btnGetExistingAccounts_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                int accountId = 0;
 
-        //    foreach(var account in accounts)
-        //    {
-        //        string line = string.Format("{0},{1},{2},{3}", account.AccountId, account.ClaimExpire, account.Chain, account.Address);
-        //        lines.Add(line);
-        //    }
+                string chain = _blockchainController.ChainName;
 
-        //    File.WriteAllLines(fileName + ".backup", lines);
-        //}
+                Nethereum.Web3.Accounts.Account mainAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(0).PrivateKey);
+
+                int notMintedCount = 0;
+
+                while (true)
+                {
+                    var accountfromDB = _dataController.GetAccountByIdAndChain(accountId, chain);
+
+                    if (accountfromDB == null)
+                    {
+                        Nethereum.Web3.Accounts.Account mintAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(accountId).PrivateKey);
+                        var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
+
+                        //Does not have a rank
+                        if (HasClaimedRank(accountId, userMintResult) == false)
+                        {
+                            notMintedCount++;
+                        }
+                        else
+                        {
+                            notMintedCount = 0;
+                            var term = userMintResult.Term;
+                            var matureDate = UnixTimeStampToDateTime((long)userMintResult.MaturityTs);
+                            var address = userMintResult.Address;
+                            _dataController.UpdateClaimInDB(accountId, matureDate, address, chain);
+                            LoadTotals();
+                        }
+                    }
+                    else
+                    {
+                        notMintedCount = 0;
+
+                        if (accountfromDB.ClaimExpire != null && DateTime.UtcNow > accountfromDB.ClaimExpire) //is expired
+                        {
+                            Nethereum.Web3.Accounts.Account mintAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(accountId).PrivateKey);
+                            var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
+
+                            if(userMintResult.Address != mintAccount.Address) // It's claimed. So remove in local database
+                            {
+                                _dataController.DeleteClaimByIdAndChain(accountId, chain);
+                            }
+                        }
+                    }
+
+                    if (notMintedCount >= 5)
+                    {
+                        break;
+                    }
+
+                    accountId++;
+                }
+
+                RefreshGrid();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
     }
 }
