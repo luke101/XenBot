@@ -19,7 +19,7 @@ using XenBot.Entities;
 
 namespace XenBot
 {
-    public class XenBscBlockchainController : IXenBlockChainController
+    public class XenMaticBlockchainController : IXenBlockChainController
     {
         private IBlockchainController _blockchainController;
 
@@ -28,7 +28,7 @@ namespace XenBot
         private readonly string _abi;
         private readonly Nethereum.Contracts.Contract _contract;
 
-        public XenBscBlockchainController(IBlockchainController blockchainController, string abi, string contractAddress)
+        public XenMaticBlockchainController(IBlockchainController blockchainController, string abi, string contractAddress)
         {
             _blockchainController = blockchainController;
 
@@ -43,6 +43,15 @@ namespace XenBot
             var userMintFunction = _contract.GetFunction("userMints");
             var userMint = await userMintFunction.CallAsync<UserMintOutputDTO>(address);
             return userMint;
+        }
+
+        public async Task<long> GetCurrentMaxTerm()
+        {
+            var getCurrentMaxTermFunc = _contract.GetFunction("getCurrentMaxTerm");
+            var maxTerm = await getCurrentMaxTermFunc.CallAsync<BigInteger>();
+            long maxTermLong = (long)maxTerm;
+            long days = maxTermLong / (3600 * 24);
+            return days;
         }
 
         public long GetGrossReward(long globalRank, long amplifier, long term, long eaa, long rank)
@@ -60,15 +69,6 @@ namespace XenBot
             var globalRankFunction = _contract.GetFunction("globalRank");
             long rank = await globalRankFunction.CallAsync<long>();
             return rank;
-        }
-
-        public async Task<long> GetCurrentMaxTerm()
-        {
-            var getCurrentMaxTermFunc = _contract.GetFunction("getCurrentMaxTerm");
-            var maxTerm = await getCurrentMaxTermFunc.CallAsync<BigInteger>();
-            long maxTermLong = (long)maxTerm;
-            long days = maxTermLong / (3600 * 24);
-            return days;
         }
 
         public async Task<BigInteger> EstimateGasToClaim(string address, int days)

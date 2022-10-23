@@ -18,5 +18,11 @@ namespace XenBot.Factories
         {
             return new EthBlockchainController("https://mainnet.infura.io/v3/8a63c898226d41558163dadbf3c6b7c0");
         }
+
+        public IBlockchainController CreateMaticBlockchainController()
+        {
+            return new MaticBlockchainController("https://polygon-rpc.com/");
+            //return new MaticBlockchainController("https://matic-mainnet-full-rpc.bwarelabs.com");
+        }
     }
 }

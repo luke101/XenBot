@@ -46,6 +46,23 @@ namespace XenBot
             return userMint;
         }
 
+        public long GetGrossReward(long globalRank, long amplifier, long term, long eaa, long rank)
+        {
+            var delta = Math.Max(globalRank - rank, 2);
+            var eea2 = (1_000 + eaa);
+            var log128 = Math.Log2(delta);
+            var reward128 = log128 * (double)amplifier * (double)term * (double)eea2;
+            var r = reward128 / (1_000);
+            return (long)r;
+        }
+
+        public async Task<long> GetGlobalRank()
+        {
+            var globalRankFunction = _contract.GetFunction("globalRank");
+            long rank = await globalRankFunction.CallAsync<long>();
+            return rank;
+        }
+
         public async Task<long> GetCurrentMaxTerm()
         {
             var getCurrentMaxTermFunc = _contract.GetFunction("getCurrentMaxTerm");
@@ -62,15 +79,13 @@ namespace XenBot
             return gas.Value;
         }
 
-        public async Task<bool> ClaimRank(Nethereum.Web3.Accounts.Account account, int days, int tip)
+        public async Task<bool> ClaimRank(Nethereum.Web3.Accounts.Account account, int days, BigInteger gas, GasPrice gasPrice)
         {
             bool success = true;
             Web3 web3 = new Web3(account, _provider);
             web3.TransactionManager.UseLegacyAsDefault = true;
             var contract = web3.Eth.GetContract(_abi, _contract.Address);
             var claimRankFunction = contract.GetFunction("claimRank");
-            GasPrice gasPrice = await _blockchainController.EstimateGasPriceAsync(tip);
-            var gas = await EstimateGasToClaim(account.Address, days);
             var receipt = await claimRankFunction.SendTransactionAndWaitForReceiptAsync(account.Address, new HexBigInteger(gas), new HexBigInteger(gasPrice.Priority), value: null, receiptRequestCancellationToken: null, new BigInteger(days));
 
             if (receipt == null)

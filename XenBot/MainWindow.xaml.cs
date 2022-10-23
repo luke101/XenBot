@@ -45,6 +45,7 @@ using XenBot.BlockChainControllers;
 using XenBot.Factories;
 using XenBot.DataControllers;
 using XenBot.WebControllers;
+using System.Windows.Markup;
 
 namespace XenBot
 {
@@ -56,8 +57,10 @@ namespace XenBot
         private string _password;
         private decimal _price = 0;
         private int _priorityFee = 1;
+        private int _wallets = 1;
         private Wallet _wallet;
         private bool cancelPressed = false;
+        private long _globalRank = 1;
         private List<Entities.Account> _accounts = new List<Entities.Account>();
         
         private BlockchainControllerFactory _blockchainControllerFactory;
@@ -88,13 +91,23 @@ namespace XenBot
             _dataController.AccountUpdated += _dataController_AccountUpdated;
             _dataController.AccountDeleted += _dataController_AccountDeleted;
             AccountsGrid.ItemsSource = _accountsDG;
-            InfuraUrl.Text = "https://bsc-dataseed.binance.org/";
-            LoadWallet();
-            await LoadInfo();
-            Setup();
-            RefreshGrid();
-            LoadTotals();
             CancelBtn.IsEnabled = false;
+
+            try
+            {
+                EnableApp(false);
+                LoadWallet();
+                await LoadInfo();
+                Setup();
+                RefreshGrid();
+                LoadTotals();
+            }
+            finally
+            {
+                EnableApp(true);
+            }
+
+            
         }
 
         
@@ -105,6 +118,7 @@ namespace XenBot
 
             ETHTOT.Text = totals.ContainsKey("ETH") ? totals["ETH"].ToString() : "0";
             BSCTOT.Text = totals.ContainsKey("BSC") ? totals["BSC"].ToString() : "0";
+            MATICTOT.Text = totals.ContainsKey("MATIC") ? totals["MATIC"].ToString() : "0";
         }
 
         private async Task LoadInfo()
@@ -113,6 +127,7 @@ namespace XenBot
             await LoadBalance();
             await LoadMaxCostInDollars();
             await LoadCurrentMaxTerm();
+            _globalRank = await _xenBlockchainController.GetGlobalRank();
         }
 
         private void LoadFactories()
@@ -129,6 +144,12 @@ namespace XenBot
                 _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenEthBlockchainController();
                 _webController = _webControllerFactory.CreateEthWebController();
             }
+            else if (cbBlockChain.SelectedIndex == 2)
+            {
+                _blockchainController = _blockchainControllerFactory.CreateMaticBlockchainController();
+                _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenMaticBlockchainController();
+                _webController = _webControllerFactory.CreateMaticWebController();
+            }
         }
 
         private async Task LoadCurrentMaxTerm()
@@ -143,7 +164,7 @@ namespace XenBot
             GasPrice gasPrice = await _blockchainController.EstimateGasPriceAsync(_priorityFee);
             BigInteger gas = await _xenBlockchainController.EstimateGasToClaim(_wallet.GetAccount(int.MaxValue).Address, 1);
             decimal claimRankTransactionFee = Web3.Convert.FromWei(gasPrice.Price * gas);
-            string price = string.Format("{0:N}", _price * claimRankTransactionFee);
+            string price = string.Format("{0:N4}", _price * claimRankTransactionFee);
             MaxGasCost.Text = price;
         }
 
@@ -248,7 +269,9 @@ namespace XenBot
 
                 Nethereum.Web3.Accounts.Account mainAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(0).PrivateKey);
 
-                while (true)
+                int walletsCreated = 0;
+
+                while(true)
                 {
                     if(cancelPressed == true)
                     {
@@ -311,24 +334,33 @@ namespace XenBot
                             BigInteger amountToSend = mintAccountBalance >= claimRankTransactionFee ? new BigInteger(0) : claimRankTransactionFee - mintAccountBalance;
 
                             await SendMoneyToMintAccount(accountId, _wallet, amountToSend);
-                            await ClaimRank(accountId, _wallet, claimRankGas, termDays);
+                            await _xenBlockchainController.ClaimRank(_wallet.GetAccount(accountId), termDays, claimRankGas, gasPrice);
+                            
+                            walletsCreated++;
 
                             DateTime claimExpire = DateTime.UtcNow.AddDays(termDays);
                             string address = _wallet.GetAccount(accountId).Address;
-                            _dataController.UpdateClaimInDB(accountId, claimExpire, address, chain);
+                            var data = await _xenBlockchainController.GetUserMints(address);
+                            var tokens = _xenBlockchainController.GetGrossReward(_globalRank, (long)data.Amplifier, (long)data.Term, (long)data.EaaRate, (long)data.Rank);
+                            _dataController.UpdateClaimInDB(accountId, claimExpire, address, chain, (long)data.Rank, (long)data.Amplifier, (long)data.EaaRate, (long)data.Term, tokens);
                         }
                         else
                         {
                             var term = userMintResult.Term;
                             var matureDate = UnixTimeStampToDateTime((long)userMintResult.MaturityTs);
                             var address = userMintResult.Address;
-                            _dataController.UpdateClaimInDB(accountId, matureDate, address, chain);
+                            var tokens = _xenBlockchainController.GetGrossReward(_globalRank, (long)userMintResult.Amplifier, (long)userMintResult.Term, (long)userMintResult.EaaRate, (long)userMintResult.Rank);
+                            _dataController.UpdateClaimInDB(accountId, UnixTimeStampToDateTime((long)userMintResult.MaturityTs), address, chain, (long)userMintResult.Rank, (long)userMintResult.Amplifier, (long)userMintResult.EaaRate, (long)userMintResult.Term, tokens);
                         }
-
                         LoadTotals();
+
+                        if (_wallets >= walletsCreated)
+                        {
+                            break;
+                        }
                     }
 
-                accountId++;
+                    accountId++;
                 }
             }
             catch(Exception ex)
@@ -391,11 +423,15 @@ namespace XenBot
         {
             UpdatePriceButton.IsEnabled = isEnabled;
             MaxGasCost.IsEnabled = isEnabled;
-            InfuraUrl.IsEnabled = isEnabled;
+            tbWallets.IsEnabled = isEnabled;
             Address.IsEnabled = isEnabled;
             TermDays.IsEnabled = isEnabled;
             ClaimRankBtn.IsEnabled = isEnabled;
             cbBlockChain.IsEnabled = isEnabled;
+            btnGetExistingAccounts.IsEnabled = isEnabled;
+            cbPriorityFee.IsEnabled = isEnabled;
+            ShowPrivateKey.IsEnabled = isEnabled;
+            UpdatePriceButton.IsEnabled = isEnabled;
         }
 
         private bool HasClaimedRank(int accountId, UserMintOutputDTO userMintResult)
@@ -403,10 +439,10 @@ namespace XenBot
             return userMintResult.Address == _wallet.GetAccount(accountId).Address;
         }
 
-        private async Task ClaimRank(int accountId, Wallet wallet, BigInteger gas, int termDays)
-        {
-            await _xenBlockchainController.ClaimRank(wallet.GetAccount(accountId), termDays, _priorityFee);
-        }
+        //private async Task ClaimRank(int accountId, Wallet wallet, BigInteger gas, int termDays)
+        //{
+        //    await _xenBlockchainController.ClaimRank(wallet.GetAccount(accountId), termDays, _priorityFee);
+        //}
 
         private async Task<bool> SendMoneyToMintAccount(int accountId, Wallet wallet, BigInteger amountToSend)
         {
@@ -460,9 +496,17 @@ namespace XenBot
         {
             if (IsLoaded)
             {
-                LoadFactories();
-                RefreshGrid();
-                await LoadInfo();
+                try
+                {
+                    EnableApp(false);
+                    LoadFactories();
+                    RefreshGrid();
+                    await LoadInfo();
+                }
+                finally
+                {
+                    EnableApp(true);
+                }
             }
         }
 
@@ -470,6 +514,7 @@ namespace XenBot
         {
             try
             {
+                var cc  =_wallet.GetAccount(int.MaxValue);
                 int accountId = 0;
 
                 string chain = _blockchainController.ChainName;
@@ -498,7 +543,8 @@ namespace XenBot
                             var term = userMintResult.Term;
                             var matureDate = UnixTimeStampToDateTime((long)userMintResult.MaturityTs);
                             var address = userMintResult.Address;
-                            _dataController.UpdateClaimInDB(accountId, matureDate, address, chain);
+                            var tokens = _xenBlockchainController.GetGrossReward(_globalRank, (long)userMintResult.Amplifier, (long)userMintResult.Term, (long)userMintResult.EaaRate, (long)userMintResult.Rank);
+                            _dataController.UpdateClaimInDB(accountId, matureDate, address, chain, (long)userMintResult.Rank, (long)userMintResult.Amplifier, (long)userMintResult.EaaRate, (long)userMintResult.Term, tokens);
                             LoadTotals();
                         }
                     }
@@ -508,6 +554,7 @@ namespace XenBot
 
                         if (accountfromDB.ClaimExpire != null && DateTime.UtcNow > accountfromDB.ClaimExpire) //is expired
                         {
+                            //var xx = _wallet.GetAccount(accountId).PrivateKey;
                             Nethereum.Web3.Accounts.Account mintAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(accountId).PrivateKey);
                             var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
 
@@ -527,10 +574,41 @@ namespace XenBot
                 }
 
                 RefreshGrid();
+                LoadTokens();
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message);
+            }
+        }
+
+        private void LoadTokens()
+        {
+            var dict = _dataController.AggregateTokensByChain();
+            MessageBox.Show(dict["MATIC"].ToString());
+        }
+
+        private void tbWallets_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if(int.TryParse(tbWallets.Text, out _wallets) == false)
+            {
+                _wallets = 1;
+                MessageBox.Show("Invalid number of wallets");
+                tbWallets.Text = "1";
+            }
+        }
+
+        private async void btnRefreshData_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                EnableApp(false);
+                await LoadInfo();
+                _globalRank = await _xenBlockchainController.GetGlobalRank();
+            }
+            finally
+            {
+                EnableApp(true);
             }
         }
     }
