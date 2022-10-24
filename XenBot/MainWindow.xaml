@@ -21,6 +21,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <TextBlock Text="Blockchain:" Margin="0 0 5 5" FontFamily="Arial Black" Foreground="Gray" FontSize="25" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Column="0" />
@@ -41,7 +42,7 @@
                 </Grid>
                 
                
-                <TextBlock Text="Balance:" Margin="0 0 5 5" HorizontalAlignment="Right" VerticalAlignment="Center" FontFamily="Arial Black" Foreground="Gray" FontSize="25" Grid.Row="1" Grid.Column="0" />
+                <TextBlock Text="Balance (BNB):" Margin="0 0 5 5" HorizontalAlignment="Right" VerticalAlignment="Center" FontFamily="Arial Black" Foreground="Gray" FontSize="25" Grid.Row="1" Grid.Column="0" />
                 <Grid Grid.Column="1" Grid.Row="1" VerticalAlignment="Center" Margin="0 0 0 5">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -87,14 +88,11 @@
                 </Grid>
 
 
-                <TextBlock Text="Wallets:" VerticalAlignment="Center" Margin="0 0 5 5" HorizontalAlignment="Right" FontFamily="Arial Black" Foreground="Gray" FontSize="25" Grid.Column="0" Grid.Row="3" />
+                <TextBlock Text="Wallets to Create" VerticalAlignment="Center" Margin="0 0 5 5" HorizontalAlignment="Right" FontFamily="Arial Black" Foreground="Gray" FontSize="25" Grid.Column="0" Grid.Row="3" />
                 <TextBox x:Name="tbWallets" Text="1" FontSize="25" Margin="0 0 0 5" Grid.Column="1" Grid.Row="3" TextChanged="tbWallets_TextChanged" />
                 <TextBlock Text="Term, Days:" HorizontalAlignment="Right" FontFamily="Arial Black" Foreground="Gray" FontSize="25" Margin="0 0 5 5" Grid.Row="4" Grid.Column="0" />
                 <TextBox x:Name="TermDays" Text="" Grid.Column="1" FontSize="25" Margin="0 0 0 5" Grid.Row="4" />
-                <TextBlock Text="Totals:" HorizontalAlignment="Right" FontFamily="Arial Black" Foreground="Gray" FontSize="25" Margin="0 0 5 5" Grid.Row="5" Grid.Column="0" />
-                
-                <!--<TextBlock x:Name="TotalMints" Text="" FontFamily="Arial Black" Foreground="LimeGreen" FontSize="16" Grid.Column="1" Margin="0 0 0 5" Grid.Row="5" />-->
-
+                <TextBlock Text="Wallet Counts:" HorizontalAlignment="Right" FontFamily="Arial Black" Foreground="Gray" FontSize="25" Margin="0 0 5 5" Grid.Row="5" Grid.Column="0" />
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Grid.Column="1" Margin="0 0 0 5" Grid.Row="5">
                     <Grid Margin="0 0 8 0">
                         <Grid.ColumnDefinitions>
@@ -121,8 +119,11 @@
                         <TextBlock x:Name="MATICTOT" VerticalAlignment="Center" FontFamily="Arial Black" FontSize="20"  Grid.Column="1" />
                     </Grid>
                 </StackPanel>
-                
-                <Grid Grid.Column="0" Grid.Row="6" Grid.ColumnSpan="2" Margin="0 0 0 5">
+
+                <TextBlock Text="Estimated Tokens:" VerticalAlignment="Center" HorizontalAlignment="Right" FontFamily="Arial Black" Foreground="Gray" FontSize="25" Margin="0 0 5 5" Grid.Row="6" Grid.Column="0" />
+                <TextBlock x:Name="txtEstimatedTokens" VerticalAlignment="Center" Grid.Column="1" FontSize="25" Margin="0 0 0 5" Grid.Row="6" />
+
+                <Grid Grid.Column="0" Grid.Row="7" Grid.ColumnSpan="2" Margin="0 0 0 5">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
@@ -130,10 +131,10 @@
                     </Grid.ColumnDefinitions>
                     <Button x:Name="ClaimRankBtn" Content="Claim Rank Till Exhausted" Margin="0 0 5 0" FontSize="25" Grid.Column="0" Click="Button_Click_2" />
                     <Button x:Name="CancelBtn" Content="Cancel" FontSize="25" Grid.Column="1" Margin="0 0 5 0" Click="Button_Click_3" />
-                    <Button x:Name="btnGetExistingAccounts" Content="Get Existing Wallets" Grid.Column="2" FontSize="25" Margin="0 0 0 0" Click="btnGetExistingAccounts_Click" />
+                    <Button x:Name="btnGetExistingAccounts" Content="Find Existing Wallets" Grid.Column="2" FontSize="25" Margin="0 0 0 0" Click="btnGetExistingAccounts_Click" />
                     <!--<Button x:Name="BackUpBtn" Content="Back Up Data" Grid.Column="2" Click="BackUpBtn_Click" />-->
                 </Grid>
-                <DataGrid x:Name="AccountsGrid" Grid.Column="0" Grid.Row="7" CanUserSortColumns="True" AutoGenerateColumns="False" IsReadOnly="True" Grid.ColumnSpan="2">
+                <DataGrid x:Name="AccountsGrid" Grid.Column="0" Grid.Row="8" CanUserSortColumns="True" AutoGenerateColumns="False" IsReadOnly="True" Grid.ColumnSpan="2">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="ID" Width="Auto" Binding="{Binding AccountId}" IsReadOnly="True" />
                         <DataGridTextColumn CanUserSort="True" Header="Days Left" Width="Auto" Binding="{Binding DaysLeft}" IsReadOnly="True" />

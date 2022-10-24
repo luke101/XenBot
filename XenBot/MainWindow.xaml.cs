@@ -46,6 +46,7 @@ using XenBot.Factories;
 using XenBot.DataControllers;
 using XenBot.WebControllers;
 using System.Windows.Markup;
+using System.Globalization;
 
 namespace XenBot
 {
@@ -101,6 +102,7 @@ namespace XenBot
                 Setup();
                 RefreshGrid();
                 LoadTotals();
+                LoadTokens();
             }
             finally
             {
@@ -222,7 +224,7 @@ namespace XenBot
         private async Task LoadBalance()
         {
             var balance = await _blockchainController.Getbalance(_wallet.GetAccount(0).Address);
-            Balance.Text = Web3.Convert.FromWei(balance).ToString();
+            Balance.Text = string.Format("{0:N4}", Web3.Convert.FromWei(balance));
         }
 
         private async Task GetPrice()
@@ -333,7 +335,7 @@ namespace XenBot
                             var mintAccountBalance = await _blockchainController.Getbalance(mintAccount.Address);
                             BigInteger amountToSend = mintAccountBalance >= claimRankTransactionFee ? new BigInteger(0) : claimRankTransactionFee - mintAccountBalance;
 
-                            await SendMoneyToMintAccount(accountId, _wallet, amountToSend);
+                            await SendMoneyToMintAccount(accountId, _wallet, amountToSend, gasPrice, transferGas);
                             await _xenBlockchainController.ClaimRank(_wallet.GetAccount(accountId), termDays, claimRankGas, gasPrice);
                             
                             walletsCreated++;
@@ -354,7 +356,7 @@ namespace XenBot
                         }
                         LoadTotals();
 
-                        if (_wallets >= walletsCreated)
+                        if (_wallets <= walletsCreated)
                         {
                             break;
                         }
@@ -444,7 +446,7 @@ namespace XenBot
         //    await _xenBlockchainController.ClaimRank(wallet.GetAccount(accountId), termDays, _priorityFee);
         //}
 
-        private async Task<bool> SendMoneyToMintAccount(int accountId, Wallet wallet, BigInteger amountToSend)
+        private async Task<bool> SendMoneyToMintAccount(int accountId, Wallet wallet, BigInteger amountToSend, GasPrice gasPrice, BigInteger gas)
         {
             //No need to send money to main account
             if(accountId == 0)
@@ -456,7 +458,7 @@ namespace XenBot
 
             if (amountToSend > new BigInteger(0))
             {
-                success = await _blockchainController.TransferCoins(wallet.GetAccount(0), _wallet.GetAccount(accountId).Address, amountToSend, _priorityFee);
+                success = await _blockchainController.TransferCoins(wallet.GetAccount(0), _wallet.GetAccount(accountId).Address, amountToSend, _priorityFee, gas, gasPrice);
             }
 
             return success;
@@ -502,6 +504,7 @@ namespace XenBot
                     LoadFactories();
                     RefreshGrid();
                     await LoadInfo();
+                    LoadTokens();
                 }
                 finally
                 {
@@ -584,17 +587,32 @@ namespace XenBot
 
         private void LoadTokens()
         {
+            long tokens = 0;
+
             var dict = _dataController.AggregateTokensByChain();
-            MessageBox.Show(dict["MATIC"].ToString());
+
+            if (dict.ContainsKey(cbBlockChain.Text))
+            {
+                tokens = dict[cbBlockChain.Text];
+            }
+
+            string tokenStr = string.Format(CultureInfo.InvariantCulture, "{0:n0}", tokens);
+
+            txtEstimatedTokens.Text = tokenStr;
         }
 
         private void tbWallets_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if(int.TryParse(tbWallets.Text, out _wallets) == false)
+            int dummy = 0;
+            if(int.TryParse(tbWallets.Text, out dummy) == false)
             {
                 _wallets = 1;
                 MessageBox.Show("Invalid number of wallets");
                 tbWallets.Text = "1";
+            }
+            else
+            {
+                _wallets = dummy;
             }
         }
 
@@ -604,6 +622,7 @@ namespace XenBot
             {
                 EnableApp(false);
                 await LoadInfo();
+                LoadTokens();
                 _globalRank = await _xenBlockchainController.GetGlobalRank();
             }
             finally

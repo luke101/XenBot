@@ -58,7 +58,7 @@ namespace XenBot.BlockChainControllers
             return estimate.Value;
         }
 
-        public async Task<bool> TransferCoins(Nethereum.Web3.Accounts.Account fromAccount, string to, BigInteger amount, int tip)
+        public async Task<bool> TransferCoins(Nethereum.Web3.Accounts.Account fromAccount, string to, BigInteger amount, int tip, BigInteger gas, GasPrice gasPrice)
         {
             if (amount <= new BigInteger(0))
             {
@@ -73,9 +73,6 @@ namespace XenBot.BlockChainControllers
 
             if (amount > new BigInteger(0))
             {
-                var gas = await EstimateCoinTransferGas(fromAccount.Address, to, amount);
-                var gasPrice = await EstimateGasPriceAsync(tip);
-
                 var transactionInput = new TransactionInput
                 {
                     From = fromAccount.Address,
