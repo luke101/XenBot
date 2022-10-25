@@ -107,6 +107,58 @@ namespace XenBot.DataControllers
             return accounts;
         }
 
+        public List<Entities.Account> GetExpiredAccountsByChain(string chain)
+        {
+            List<Entities.Account> accounts = new List<Entities.Account>();
+
+            using (SqliteConnection conn = new SqliteConnection(string.Format("Data Source={0};", _dbFileName)))
+            {
+                conn.Open();
+
+                string statement = "select id, claim_expire, stake_expire, address, chain, rank, amplifier, eaa_rate, term, tokens from data where claim_expire <= @claim_expire and chain = @chain order by claim_expire";
+
+                using (SqliteCommand command = new SqliteCommand(statement, conn))
+                {
+
+                    command.Parameters.AddWithValue("@claim_expire", DateTime.UtcNow);
+                    command.Parameters.AddWithValue("@chain", chain);
+
+                    using (SqliteDataReader reader = command.ExecuteReader())
+                    {
+                        int idOrdinal = reader.GetOrdinal("id");
+                        int claimExpireOrdinal = reader.GetOrdinal("claim_expire");
+                        int stakeExpireOrdinal = reader.GetOrdinal("stake_expire");
+                        int addressOrdinal = reader.GetOrdinal("address");
+                        int chainOrdinal = reader.GetOrdinal("chain");
+                        int rankOrdinal = reader.GetOrdinal("rank");
+                        int amplifierOrdinal = reader.GetOrdinal("amplifier");
+                        int eaarateOrdinal = reader.GetOrdinal("eaa_rate");
+                        int termOrdinal = reader.GetOrdinal("term");
+                        int tokensOrdinal = reader.GetOrdinal("tokens");
+
+                        while (reader.Read())
+                        {
+                            Entities.Account account = new Entities.Account();
+                            account.AccountId = reader.GetInt32(idOrdinal);
+                            account.ClaimExpire = reader.IsDBNull(claimExpireOrdinal) ? null : reader.GetDateTime(claimExpireOrdinal).ToLocalTime();
+                            account.StakeExpire = reader.IsDBNull(stakeExpireOrdinal) ? null : reader.GetDateTime(stakeExpireOrdinal).ToLocalTime();
+                            account.Address = reader.GetString(addressOrdinal);
+                            account.Chain = reader.GetString(chainOrdinal);
+                            account.Rank = reader.GetInt64(rankOrdinal);
+                            account.Amplifier = reader.GetInt64(amplifierOrdinal);
+                            account.EaaRate = reader.GetInt64(eaarateOrdinal);
+                            account.Term = reader.GetInt64(termOrdinal);
+                            account.Tokens = reader.GetInt64(tokensOrdinal);
+                            accounts.Add(account);
+                        }
+
+                    }
+                }
+            }
+
+            return accounts;
+        }
+
         public List<Entities.Account> GetAccountsByChain(string chain)
         {
             List<Entities.Account> accounts = new List<Entities.Account>();
@@ -227,7 +279,7 @@ namespace XenBot.DataControllers
 
                         while (reader.Read())
                         {
-                            chainDict[reader.GetString(chainOrdinal)] = reader.GetInt32(countOrdinal);
+                            chainDict[reader.GetString(chainOrdinal)] = reader.GetInt64(countOrdinal);
                         }
                     }
                 }
@@ -278,7 +330,7 @@ namespace XenBot.DataControllers
 	                                    claim_expire DATETIME,
 	                                    stake_expire DATETIME,
 	                                    address      TEXT,
-	                                    tokens       integer,
+	                                    tokens       LONG INTEGER,
 	                                    chain        TEXT, 
 	                                    rank         integer,
                                         term         integer,

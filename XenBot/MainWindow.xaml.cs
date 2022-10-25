@@ -47,6 +47,7 @@ using XenBot.DataControllers;
 using XenBot.WebControllers;
 using System.Windows.Markup;
 using System.Globalization;
+using Microsoft.VisualBasic;
 
 namespace XenBot
 {
@@ -108,8 +109,6 @@ namespace XenBot
             {
                 EnableApp(true);
             }
-
-            
         }
 
         
@@ -282,6 +281,7 @@ namespace XenBot
 
                     var accountfromDB = _dataController.GetAccountByIdAndChain(accountId, _blockchainController.ChainName);
 
+
                     if (accountfromDB == null)
                     {
                         Nethereum.Web3.Accounts.Account mintAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(accountId).PrivateKey);
@@ -291,13 +291,18 @@ namespace XenBot
                         if (HasClaimedRank(accountId, userMintResult) == false)
                         {
                             GasPrice gasPrice;
-                            BigInteger claimRankGas = 0;
                             BigInteger claimRankTransactionFee = 0;
+
+                            BigInteger claimRankGas = await _xenBlockchainController.EstimateGasToClaim(mintAccount.Address, termDays);
+                            BigInteger transferGas = await _blockchainController.EstimateCoinTransferGas(mainAccount.Address, mintAccount.Address, claimRankGas);
+                            
+                            var seedAccountBalance = await _blockchainController.Getbalance(mainAccount.Address);
+                            var mintAccountBalance = await _blockchainController.Getbalance(mintAccount.Address);
 
                             while (true)
                             {
                                 gasPrice = await _blockchainController.EstimateGasPriceAsync(_priorityFee);
-                                claimRankGas = await _xenBlockchainController.EstimateGasToClaim(mintAccount.Address, termDays);
+                                
                                 claimRankTransactionFee = gasPrice.Priority * claimRankGas;
 
                                 var maxFeeWillingToPay = Web3.Convert.ToWei((decimal.Parse(MaxGasCost.Text) / _price));
@@ -320,8 +325,6 @@ namespace XenBot
                                 return;
                             }
 
-                            var seedAccountBalance = await _blockchainController.Getbalance(mainAccount.Address);
-                            BigInteger transferGas = await _blockchainController.EstimateCoinTransferGas(mainAccount.Address, mintAccount.Address, claimRankGas);
                             var transferFee = gasPrice.Priority * transferGas;
                             var claimFee = gasPrice.Priority * claimRankGas;
                             var transferAmount = transferFee + claimFee;
@@ -332,7 +335,7 @@ namespace XenBot
                                 break;
                             }
 
-                            var mintAccountBalance = await _blockchainController.Getbalance(mintAccount.Address);
+                            
                             BigInteger amountToSend = mintAccountBalance >= claimRankTransactionFee ? new BigInteger(0) : claimRankTransactionFee - mintAccountBalance;
 
                             await SendMoneyToMintAccount(accountId, _wallet, amountToSend, gasPrice, transferGas);
@@ -374,8 +377,11 @@ namespace XenBot
                 cancelPressed = false;
                 CancelBtn.IsEnabled = false;
                 EnableApp(true);
+                LoadTokens();
             }
         }
+
+
 
         private void _dataController_AccountAdded(object? sender, AccountEventArg e)
         {
@@ -389,7 +395,7 @@ namespace XenBot
 
         private void _dataController_AccountDeleted(object? sender, AccountEventArg e)
         {
-            
+            _accountsDG.Remove(_accountsDG.SingleOrDefault(i => i.AccountId == e.Account.AccountId));
         }
 
         private void UpdateAccountToGrid(Entities.Account account)
@@ -426,7 +432,6 @@ namespace XenBot
             UpdatePriceButton.IsEnabled = isEnabled;
             MaxGasCost.IsEnabled = isEnabled;
             tbWallets.IsEnabled = isEnabled;
-            Address.IsEnabled = isEnabled;
             TermDays.IsEnabled = isEnabled;
             ClaimRankBtn.IsEnabled = isEnabled;
             cbBlockChain.IsEnabled = isEnabled;
@@ -434,6 +439,8 @@ namespace XenBot
             cbPriorityFee.IsEnabled = isEnabled;
             ShowPrivateKey.IsEnabled = isEnabled;
             UpdatePriceButton.IsEnabled = isEnabled;
+            btnRefreshData.IsEnabled = isEnabled;
+            btnClaimRewards.IsEnabled = isEnabled;
         }
 
         private bool HasClaimedRank(int accountId, UserMintOutputDTO userMintResult)
@@ -628,6 +635,115 @@ namespace XenBot
             finally
             {
                 EnableApp(true);
+            }
+        }
+
+        private async void btnClaimRewards_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                CancelBtn.IsEnabled = true;
+                EnableApp(false);
+
+                string chain = _blockchainController.ChainName;
+
+                decimal maxClaimRankGasInDollars = 0;
+
+                if (string.IsNullOrWhiteSpace(MaxGasCost.Text) || decimal.TryParse(MaxGasCost.Text, out maxClaimRankGasInDollars) == false)
+                {
+                    MessageBox.Show("Invalid max gas cost");
+                    return;
+                }
+
+                Nethereum.Web3.Accounts.Account mainAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(0).PrivateKey);
+
+                if (cancelPressed == true)
+                {
+                    return;
+                }
+
+                var expiredAccounts = _dataController.GetExpiredAccountsByChain(chain);
+
+
+                foreach(var expiredAccount in expiredAccounts)
+                {
+                    var mintAccount = _wallet.GetAccount(expiredAccount.AccountId);
+
+                    var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
+
+                    if (HasClaimedRank(expiredAccount.AccountId, userMintResult))
+                    {
+                        GasPrice gasPrice;
+                        BigInteger mintRewardTransactionFee = 0;
+
+                        BigInteger claimRewardGas = await _xenBlockchainController.EstimateGasToMintReward(mintAccount.Address, mainAccount.Address);
+                        BigInteger transferGas = await _blockchainController.EstimateCoinTransferGas(mainAccount.Address, mintAccount.Address, claimRewardGas);
+
+                        var seedAccountBalance = await _blockchainController.Getbalance(mainAccount.Address);
+                        var mintAccountBalance = await _blockchainController.Getbalance(mintAccount.Address);
+
+                        while (true)
+                        {
+                            gasPrice = await _blockchainController.EstimateGasPriceAsync(_priorityFee);
+
+                            mintRewardTransactionFee = gasPrice.Priority * claimRewardGas;
+
+                            var maxFeeWillingToPay = Web3.Convert.ToWei((decimal.Parse(MaxGasCost.Text) / _price));
+
+                            if (maxFeeWillingToPay > mintRewardTransactionFee)
+                            {
+                                break;
+                            }
+
+                            await Task.Delay(3500);
+
+                            if (cancelPressed == true)
+                            {
+                                return;
+                            }
+                        }
+
+                        if (cancelPressed == true)
+                        {
+                            return;
+                        }
+
+                        var transferFee = gasPrice.Priority * transferGas;
+                        var claimRewardFee = gasPrice.Priority * claimRewardGas;
+                        var transferAmount = transferFee + claimRewardFee;
+
+                        if (seedAccountBalance <= transferAmount)
+                        {
+                            MessageBox.Show("Done - ran out of money");
+                            break;
+                        }
+
+
+                        BigInteger amountToSend = mintAccountBalance >= mintRewardTransactionFee ? new BigInteger(0) : mintRewardTransactionFee - mintAccountBalance;
+
+                        await SendMoneyToMintAccount(expiredAccount.AccountId, _wallet, amountToSend, gasPrice, transferGas);
+                        await _xenBlockchainController.MintRewardAndShare(mintAccount, mainAccount.Address, claimRewardGas, gasPrice);
+
+                        _dataController.DeleteClaimByIdAndChain(expiredAccount.AccountId, chain);
+                    }
+                    else
+                    {
+                        _dataController.DeleteClaimByIdAndChain(expiredAccount.AccountId, chain);
+                    }
+
+                    LoadTotals();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                cancelPressed = false;
+                CancelBtn.IsEnabled = false;
+                EnableApp(true);
+                LoadTokens();
             }
         }
     }

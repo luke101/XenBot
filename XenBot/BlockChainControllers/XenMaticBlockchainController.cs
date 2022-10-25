@@ -78,6 +78,35 @@ namespace XenBot
             return gas.Value;
         }
 
+        public async Task<BigInteger> EstimateGasToMintReward(string mintAddress, string mainaddress)
+        {
+            var claimRankFunction = _contract.GetFunction("claimMintRewardAndShare");
+            var gas = await claimRankFunction.EstimateGasAsync(mintAddress, null, null, mainaddress, 100);
+            return gas.Value;
+        }
+
+        public async Task<bool> MintRewardAndShare(Nethereum.Web3.Accounts.Account account, string address, BigInteger gas, GasPrice gasPrice)
+        {
+            bool success = true;
+            Web3 web3 = new Web3(account, _provider);
+            web3.TransactionManager.UseLegacyAsDefault = true;
+            var contract = web3.Eth.GetContract(_abi, _contract.Address);
+            var mintRewardFunction = contract.GetFunction("claimMintRewardAndShare");
+            var receipt = await mintRewardFunction.SendTransactionAndWaitForReceiptAsync(account.Address, new HexBigInteger(gas), new HexBigInteger(gasPrice.Priority), value: null, receiptRequestCancellationToken: null, address, 100);
+
+            if (receipt == null)
+            {
+                throw new Exception("Transaction failed");
+            }
+
+            if (receipt.Succeeded(true) == false)
+            {
+                throw new Exception("Transaction failed");
+            }
+
+            return success;
+        }
+
         public async Task<bool> ClaimRank(Nethereum.Web3.Accounts.Account account, int days, BigInteger gas, GasPrice gasPrice)
         {
             bool success = true;
@@ -85,7 +114,20 @@ namespace XenBot
             web3.TransactionManager.UseLegacyAsDefault = true;
             var contract = web3.Eth.GetContract(_abi, _contract.Address);
             var claimRankFunction = contract.GetFunction("claimRank");
+
+            //TransactionInput input = new TransactionInput();
+            //input.From = _contract.Address;
+            //input.To = account.Address;
+            //input.Gas = new HexBigInteger(gas);
+            //input.GasPrice = new HexBigInteger(gasPrice.Price);
+            //input.MaxPriorityFeePerGas = new HexBigInteger(gasPrice.Priority);
+            //input.MaxFeePerGas = new HexBigInteger(gasPrice.Priority);
+
+            //var txId = await claimRankFunction.SendTransactionAsync(input, new BigInteger(days));
+
             var receipt = await claimRankFunction.SendTransactionAndWaitForReceiptAsync(account.Address, new HexBigInteger(gas), new HexBigInteger(gasPrice.Priority), value:null, receiptRequestCancellationToken:null, new BigInteger(days));
+
+            //var receipt = await claimRankFunction.SendTransactionAndWaitForReceiptAsync(txId);
 
             if (receipt == null)
             {
