@@ -109,37 +109,62 @@ namespace XenBot
 
         public async Task<bool> ClaimRank(Nethereum.Web3.Accounts.Account account, int days, BigInteger gas, GasPrice gasPrice)
         {
-            bool success = true;
-            Web3 web3 = new Web3(account, _provider);
-            web3.TransactionManager.UseLegacyAsDefault = true;
-            var contract = web3.Eth.GetContract(_abi, _contract.Address);
-            var claimRankFunction = contract.GetFunction("claimRank");
+            int retries = 0;
 
-            //TransactionInput input = new TransactionInput();
-            //input.From = _contract.Address;
-            //input.To = account.Address;
-            //input.Gas = new HexBigInteger(gas);
-            //input.GasPrice = new HexBigInteger(gasPrice.Price);
-            //input.MaxPriorityFeePerGas = new HexBigInteger(gasPrice.Priority);
-            //input.MaxFeePerGas = new HexBigInteger(gasPrice.Priority);
-
-            //var txId = await claimRankFunction.SendTransactionAsync(input, new BigInteger(days));
-
-            var receipt = await claimRankFunction.SendTransactionAndWaitForReceiptAsync(account.Address, new HexBigInteger(gas), new HexBigInteger(gasPrice.Priority), value:null, receiptRequestCancellationToken:null, new BigInteger(days));
-
-            //var receipt = await claimRankFunction.SendTransactionAndWaitForReceiptAsync(txId);
-
-            if (receipt == null)
+            while (true)
             {
-                throw new Exception("Transaction failed");
-            }
+                try
+                {
+                    bool success = true;
+                    Web3 web3 = new Web3(account, _provider);
+                    web3.TransactionManager.UseLegacyAsDefault = true;
+                    var contract = web3.Eth.GetContract(_abi, _contract.Address);
+                    var claimRankFunction = contract.GetFunction("claimRank");
 
-            if (receipt.Succeeded(true) == false)
-            {
-                throw new Exception("Transaction failed");
-            }
+                    //TransactionInput input = new TransactionInput();
+                    //input.From = _contract.Address;
+                    //input.To = account.Address;
+                    //input.Gas = new HexBigInteger(gas);
+                    //input.GasPrice = new HexBigInteger(gasPrice.Price);
+                    //input.MaxPriorityFeePerGas = new HexBigInteger(gasPrice.Priority);
+                    //input.MaxFeePerGas = new HexBigInteger(gasPrice.Priority);
 
-            return success;
+                    //var txId = await claimRankFunction.SendTransactionAsync(input, new BigInteger(days));
+
+                    var receipt = await claimRankFunction.SendTransactionAndWaitForReceiptAsync(account.Address, new HexBigInteger(gas), new HexBigInteger(gasPrice.Priority), value: null, receiptRequestCancellationToken: null, new BigInteger(days));
+
+                    //var receipt = await claimRankFunction.SendTransactionAndWaitForReceiptAsync(txId);
+
+                    if (receipt == null)
+                    {
+                        throw new Exception("Transaction failed");
+                    }
+
+                    if (receipt.Succeeded(true) == false)
+                    {
+                        throw new Exception("Transaction failed");
+                    }
+
+                    return success;
+                }
+                catch (Exception ex)
+                {
+                    if (!ex.Message.Contains("funds"))
+                    {
+                        throw;
+                    }
+                    else if (retries >= 5)
+                    {
+                        throw;
+                    }
+                    else
+                    {
+                        retries++;
+
+                        await Task.Delay(10000);
+                    }
+                }
+            }
         }
     }
 }

@@ -575,7 +575,7 @@ namespace XenBot
                         }
                     }
 
-                    if (notMintedCount >= 5)
+                    if (notMintedCount >= 15)
                     {
                         break;
                     }
@@ -655,84 +655,110 @@ namespace XenBot
                     return;
                 }
 
-                Nethereum.Web3.Accounts.Account mainAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(0).PrivateKey);
+                int retries = 0;
 
-                if (cancelPressed == true)
+                while (true)
                 {
-                    return;
-                }
-
-                var expiredAccounts = _dataController.GetExpiredAccountsByChain(chain);
-
-
-                foreach(var expiredAccount in expiredAccounts)
-                {
-                    var mintAccount = _wallet.GetAccount(expiredAccount.AccountId);
-
-                    var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
-
-                    if (HasClaimedRank(expiredAccount.AccountId, userMintResult))
+                    try
                     {
-                        GasPrice gasPrice;
-                        BigInteger mintRewardTransactionFee = 0;
-
-                        BigInteger claimRewardGas = await _xenBlockchainController.EstimateGasToMintReward(mintAccount.Address, mainAccount.Address);
-                        BigInteger transferGas = await _blockchainController.EstimateCoinTransferGas(mainAccount.Address, mintAccount.Address, claimRewardGas);
-
-                        var seedAccountBalance = await _blockchainController.Getbalance(mainAccount.Address);
-                        var mintAccountBalance = await _blockchainController.Getbalance(mintAccount.Address);
-
-                        while (true)
-                        {
-                            gasPrice = await _blockchainController.EstimateGasPriceAsync(_priorityFee);
-
-                            mintRewardTransactionFee = gasPrice.Priority * claimRewardGas;
-
-                            var maxFeeWillingToPay = Web3.Convert.ToWei((decimal.Parse(MaxGasCost.Text) / _price));
-
-                            if (maxFeeWillingToPay > mintRewardTransactionFee)
-                            {
-                                break;
-                            }
-
-                            await Task.Delay(3500);
-
-                            if (cancelPressed == true)
-                            {
-                                return;
-                            }
-                        }
+                        Nethereum.Web3.Accounts.Account mainAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(0).PrivateKey);
 
                         if (cancelPressed == true)
                         {
                             return;
                         }
 
-                        var transferFee = gasPrice.Priority * transferGas;
-                        var claimRewardFee = gasPrice.Priority * claimRewardGas;
-                        var transferAmount = transferFee + claimRewardFee;
+                        var expiredAccounts = _dataController.GetExpiredAccountsByChain(chain);
 
-                        if (seedAccountBalance <= transferAmount)
+                        foreach (var expiredAccount in expiredAccounts)
                         {
-                            MessageBox.Show("Done - ran out of money");
-                            break;
+                            var mintAccount = _wallet.GetAccount(expiredAccount.AccountId);
+
+                            var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
+
+                            if (HasClaimedRank(expiredAccount.AccountId, userMintResult))
+                            {
+                                GasPrice gasPrice;
+                                BigInteger mintRewardTransactionFee = 0;
+
+                                BigInteger claimRewardGas = await _xenBlockchainController.EstimateGasToMintReward(mintAccount.Address, mainAccount.Address);
+                                BigInteger transferGas = await _blockchainController.EstimateCoinTransferGas(mainAccount.Address, mintAccount.Address, claimRewardGas);
+
+                                var seedAccountBalance = await _blockchainController.Getbalance(mainAccount.Address);
+                                var mintAccountBalance = await _blockchainController.Getbalance(mintAccount.Address);
+
+                                while (true)
+                                {
+                                    gasPrice = await _blockchainController.EstimateGasPriceAsync(_priorityFee);
+
+                                    mintRewardTransactionFee = gasPrice.Priority * claimRewardGas;
+
+                                    var maxFeeWillingToPay = Web3.Convert.ToWei((decimal.Parse(MaxGasCost.Text) / _price));
+
+                                    if (maxFeeWillingToPay > mintRewardTransactionFee)
+                                    {
+                                        break;
+                                    }
+
+                                    await Task.Delay(3500);
+
+                                    if (cancelPressed == true)
+                                    {
+                                        return;
+                                    }
+                                }
+
+                                if (cancelPressed == true)
+                                {
+                                    return;
+                                }
+
+                                var transferFee = gasPrice.Priority * transferGas;
+                                var claimRewardFee = gasPrice.Priority * claimRewardGas;
+                                var transferAmount = transferFee + claimRewardFee;
+
+                                if (seedAccountBalance <= transferAmount)
+                                {
+                                    MessageBox.Show("Done - ran out of money");
+                                    break;
+                                }
+
+
+                                BigInteger amountToSend = mintAccountBalance >= mintRewardTransactionFee ? new BigInteger(0) : mintRewardTransactionFee - mintAccountBalance;
+
+                                await SendMoneyToMintAccount(expiredAccount.AccountId, _wallet, amountToSend, gasPrice, transferGas);
+                                await _xenBlockchainController.MintRewardAndShare(mintAccount, mainAccount.Address, claimRewardGas, gasPrice);
+
+                                _dataController.DeleteClaimByIdAndChain(expiredAccount.AccountId, chain);
+                            }
+                            else
+                            {
+                                _dataController.DeleteClaimByIdAndChain(expiredAccount.AccountId, chain);
+                            }
+
+                            LoadTotals();
                         }
 
-
-                        BigInteger amountToSend = mintAccountBalance >= mintRewardTransactionFee ? new BigInteger(0) : mintRewardTransactionFee - mintAccountBalance;
-
-                        await SendMoneyToMintAccount(expiredAccount.AccountId, _wallet, amountToSend, gasPrice, transferGas);
-                        await _xenBlockchainController.MintRewardAndShare(mintAccount, mainAccount.Address, claimRewardGas, gasPrice);
-
-                        _dataController.DeleteClaimByIdAndChain(expiredAccount.AccountId, chain);
+                        break;
                     }
-                    else
+                    catch(Exception ex)
                     {
-                        _dataController.DeleteClaimByIdAndChain(expiredAccount.AccountId, chain);
+                        if (!ex.Message.Contains("funds"))
+                        {
+                            throw;
+                        }
+                        else if(retries >= 5)
+                        {
+                            throw;
+                        }
+                        else
+                        {
+                            await Task.Delay(10000);
+                            retries++;
+                        }
                     }
-
-                    LoadTotals();
                 }
+                
             }
             catch (Exception ex)
             {
