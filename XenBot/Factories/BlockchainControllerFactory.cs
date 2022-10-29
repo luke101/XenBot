@@ -22,7 +22,11 @@ namespace XenBot.Factories
         public IBlockchainController CreateMaticBlockchainController()
         {
             return new MaticBlockchainController("https://polygon-rpc.com/");
-            //return new MaticBlockchainController("https://matic-mainnet-full-rpc.bwarelabs.com");
+        }
+
+        public IBlockchainController CreateFantomBlockchainController()
+        {
+            return new FantomBlockchainController("https://rpc.ankr.com/fantom/");
         }
     }
 }

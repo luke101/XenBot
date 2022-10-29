@@ -23,5 +23,10 @@ namespace XenBot.Factories
         {
             return new MaticWebController();
         }
+
+        public IWebController CreateFantomWebController()
+        {
+            return new FantomWebController();
+        }
     }
 }

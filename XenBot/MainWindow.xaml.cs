@@ -120,6 +120,7 @@ namespace XenBot
             ETHTOT.Text = totals.ContainsKey("ETH") ? totals["ETH"].ToString() : "0";
             BSCTOT.Text = totals.ContainsKey("BSC") ? totals["BSC"].ToString() : "0";
             MATICTOT.Text = totals.ContainsKey("MATIC") ? totals["MATIC"].ToString() : "0";
+            FANTOMTOT.Text = totals.ContainsKey("Fantom") ? totals["Fantom"].ToString() : "0";
         }
 
         private async Task LoadInfo()
@@ -150,6 +151,12 @@ namespace XenBot
                 _blockchainController = _blockchainControllerFactory.CreateMaticBlockchainController();
                 _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenMaticBlockchainController();
                 _webController = _webControllerFactory.CreateMaticWebController();
+            }
+            else if (cbBlockChain.SelectedIndex == 3)
+            {
+                _blockchainController = _blockchainControllerFactory.CreateFantomBlockchainController();
+                _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenFantomBlockchainController();
+                _webController = _webControllerFactory.CreateFantomWebController();
             }
         }
 
@@ -524,7 +531,6 @@ namespace XenBot
         {
             try
             {
-                var cc  =_wallet.GetAccount(int.MaxValue);
                 int accountId = 0;
 
                 string chain = _blockchainController.ChainName;
@@ -770,6 +776,29 @@ namespace XenBot
                 CancelBtn.IsEnabled = false;
                 EnableApp(true);
                 LoadTokens();
+            }
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string chain = _blockchainController.ChainName;
+
+                var accounts = _dataController.GetAccountsByChain(chain);
+
+                foreach (var account in accounts)
+                {
+                    var grossReward = _xenBlockchainController.GetGrossReward(_globalRank, account.Amplifier, account.Term, account.EaaRate, account.Rank);
+                    _dataController.UpdateTokensByIdAndChain(account.AccountId, chain, grossReward);
+                }
+
+                RefreshGrid();
+                LoadTokens();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
             }
         }
     }

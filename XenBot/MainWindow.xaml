@@ -36,8 +36,7 @@
                         <ComboBoxItem Content="ETH" />
                         <ComboBoxItem IsSelected="true" Content="BSC" />
                         <ComboBoxItem Content="MATIC" />
-                        <ComboBoxItem Content="ETHPOW" />
-                        <ComboBoxItem Content="Avalanche" />
+                        <ComboBoxItem Content="Fantom" />
                     </ComboBox>
                     <Button x:Name="btnRefreshData" Grid.Column="1" Margin="0 0 0 5" Content="Refresh Data" FontSize="25" VerticalAlignment="Center" Click="btnRefreshData_Click"></Button>
                 </Grid>
@@ -119,11 +118,27 @@
                         <TextBlock VerticalAlignment="Center" Text="MATIC:" FontFamily="Arial Black" Foreground="Blue" FontSize="20" Margin="0 0 3 0" Grid.Column="0" />
                         <TextBlock x:Name="MATICTOT" VerticalAlignment="Center" FontFamily="Arial Black" FontSize="20"  Grid.Column="1" />
                     </Grid>
+                    <Grid Margin="0 0 8 0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto" />
+                            <ColumnDefinition Width="auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="Fantom:" FontFamily="Arial Black" Foreground="DeepPink" FontSize="20" Margin="0 0 3 0" Grid.Column="0" />
+                        <TextBlock x:Name="FANTOMTOT" VerticalAlignment="Center" FontFamily="Arial Black" FontSize="20"  Grid.Column="1" />
+                    </Grid>
                 </StackPanel>
 
                 <TextBlock Text="Estimated Tokens:" VerticalAlignment="Center" HorizontalAlignment="Right" FontFamily="Arial Black" Foreground="Gray" FontSize="25" Margin="0 0 5 5" Grid.Row="6" Grid.Column="0" />
-                <TextBlock x:Name="txtEstimatedTokens" VerticalAlignment="Center" Grid.Column="1" FontSize="25" Margin="0 0 0 5" Grid.Row="6" />
 
+                <Grid Margin="0 0 0 5" Grid.Row="6" Grid.Column="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="auto" />
+                        <ColumnDefinition Width="auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="txtEstimatedTokens" VerticalAlignment="Center" Margin="0 0 5 5" Grid.Column="0" FontSize="25" />
+                    <Button VerticalAlignment="Center" Content="Recalculate Tokens" FontFamily="Arial" Foreground="Black" FontSize="17"  Grid.Column="1" Click="Button_Click" />
+                </Grid>
+                
                 <Grid Grid.Column="0" Grid.Row="7" Grid.ColumnSpan="2" Margin="0 0 0 5">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />

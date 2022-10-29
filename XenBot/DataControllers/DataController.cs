@@ -365,6 +365,24 @@ namespace XenBot.DataControllers
             OnAccountDeleted(new Account() { AccountId = accountId, Chain = chain });
         }
 
+        public void UpdateTokensByIdAndChain(int accountId, string chain, long tokens)
+        {
+            using (SqliteConnection conn = new SqliteConnection(string.Format("Data Source={0};", _dbFileName)))
+            {
+                conn.Open();
+
+                string statement = @"UPDATE data SET tokens = @tokens where id = @id and chain = @chain";
+
+                using (SqliteCommand command = new SqliteCommand(statement, conn))
+                {
+                    command.Parameters.AddWithValue("@id", accountId);
+                    command.Parameters.AddWithValue("@tokens", tokens);
+                    command.Parameters.AddWithValue("@chain", chain);
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+
         public long? UpdateClaimInDB(int accountId, DateTime claimExpire, string address, string chain, long rank, long amplifier, long eaaRate, long term, long tokens)
         {
             using (SqliteConnection conn = new SqliteConnection(string.Format("Data Source={0};", _dbFileName)))
