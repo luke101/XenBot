@@ -16,7 +16,9 @@ namespace XenBot.Factories
 
         public IBlockchainController CreateEthBlockchainController()
         {
-            return new EthBlockchainController("https://mainnet.infura.io/v3/8a63c898226d41558163dadbf3c6b7c0");
+            //https://rpc.flashbots.net/
+            //return new EthBlockchainController("https://mainnet.infura.io/v3/8a63c898226d41558163dadbf3c6b7c0");
+            return new EthBlockchainController("https://rpc.flashbots.net/");
         }
 
         public IBlockchainController CreateMaticBlockchainController()
@@ -27,6 +29,11 @@ namespace XenBot.Factories
         public IBlockchainController CreateFantomBlockchainController()
         {
             return new FantomBlockchainController("https://rpc.ankr.com/fantom/");
+        }
+
+        public IBlockchainController CreateEthWBlockchainController()
+        {
+            return new EthWBlockchainController("https://mainnet.ethereumpow.org");
         }
     }
 }

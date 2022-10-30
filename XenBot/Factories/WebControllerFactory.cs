@@ -28,5 +28,10 @@ namespace XenBot.Factories
         {
             return new FantomWebController();
         }
+
+        public IWebController CreateEthWWebController()
+        {
+            return new EthWWebController();
+        }
     }
 }

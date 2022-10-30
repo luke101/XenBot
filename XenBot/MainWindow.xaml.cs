@@ -121,6 +121,8 @@ namespace XenBot
             BSCTOT.Text = totals.ContainsKey("BSC") ? totals["BSC"].ToString() : "0";
             MATICTOT.Text = totals.ContainsKey("MATIC") ? totals["MATIC"].ToString() : "0";
             FANTOMTOT.Text = totals.ContainsKey("Fantom") ? totals["Fantom"].ToString() : "0";
+            ETHWTOT.Text = totals.ContainsKey("EthereumPOW") ? totals["EthereumPOW"].ToString() : "0";
+            
         }
 
         private async Task LoadInfo()
@@ -157,6 +159,12 @@ namespace XenBot
                 _blockchainController = _blockchainControllerFactory.CreateFantomBlockchainController();
                 _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenFantomBlockchainController();
                 _webController = _webControllerFactory.CreateFantomWebController();
+            }
+            else if (cbBlockChain.SelectedIndex == 4)
+            {
+                _blockchainController = _blockchainControllerFactory.CreateEthWBlockchainController();
+                _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenEthWBlockchainController();
+                _webController = _webControllerFactory.CreateEthWWebController();
             }
         }
 
@@ -319,7 +327,7 @@ namespace XenBot
                                     break;
                                 }
 
-                                await Task.Delay(3500);
+                                await Task.Delay(60000);
 
                                 if (cancelPressed == true)
                                 {
@@ -346,6 +354,7 @@ namespace XenBot
                             BigInteger amountToSend = mintAccountBalance >= claimRankTransactionFee ? new BigInteger(0) : claimRankTransactionFee - mintAccountBalance;
 
                             await SendMoneyToMintAccount(accountId, _wallet, amountToSend, gasPrice, transferGas);
+                            await _blockchainController.WaitForCoinsToTransfer(_wallet.GetAccount(accountId).Address, mintAccountBalance + amountToSend);
                             await _xenBlockchainController.ClaimRank(_wallet.GetAccount(accountId), termDays, claimRankGas, gasPrice);
                             
                             walletsCreated++;
@@ -581,7 +590,7 @@ namespace XenBot
                         }
                     }
 
-                    if (notMintedCount >= 15)
+                    if (notMintedCount >= 200)
                     {
                         break;
                     }

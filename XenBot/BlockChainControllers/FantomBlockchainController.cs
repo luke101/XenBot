@@ -46,6 +46,11 @@ namespace XenBot.BlockChainControllers
             return balance.Value;
         }
 
+        public async Task WaitForCoinsToTransfer(string address, BigInteger expected)
+        {
+            await Task.Delay(1);
+        }
+
         public async Task<BigInteger> EstimateCoinTransferGas(string from, string to, BigInteger amount)
         {
             CallInput input = new CallInput();

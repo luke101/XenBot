@@ -37,6 +37,7 @@
                         <ComboBoxItem IsSelected="true" Content="BSC" />
                         <ComboBoxItem Content="MATIC" />
                         <ComboBoxItem Content="Fantom" />
+                        <ComboBoxItem Content="EthereumPOW" />
                     </ComboBox>
                     <Button x:Name="btnRefreshData" Grid.Column="1" Margin="0 0 0 5" Content="Refresh Data" FontSize="25" VerticalAlignment="Center" Click="btnRefreshData_Click"></Button>
                 </Grid>
@@ -125,6 +126,14 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock VerticalAlignment="Center" Text="Fantom:" FontFamily="Arial Black" Foreground="DeepPink" FontSize="20" Margin="0 0 3 0" Grid.Column="0" />
                         <TextBlock x:Name="FANTOMTOT" VerticalAlignment="Center" FontFamily="Arial Black" FontSize="20"  Grid.Column="1" />
+                    </Grid>
+                    <Grid Margin="0 0 8 0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto" />
+                            <ColumnDefinition Width="auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="ETHPOW:" FontFamily="Arial Black" Foreground="DarkSalmon" FontSize="20" Margin="0 0 3 0" Grid.Column="0" />
+                        <TextBlock x:Name="ETHWTOT" VerticalAlignment="Center" FontFamily="Arial Black" FontSize="20"  Grid.Column="1" />
                     </Grid>
                 </StackPanel>
 

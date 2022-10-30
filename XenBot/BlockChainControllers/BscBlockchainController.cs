@@ -90,6 +90,11 @@ namespace XenBot.BlockChainControllers
             return success;
         }
 
+        public async Task WaitForCoinsToTransfer(string address, BigInteger expected)
+        {
+            await Task.Delay(1);
+        }
+
         public async Task<decimal> LoadBalance(string address)
         {
             var balance = await _web3.Eth.GetBalance.SendRequestAsync(address);

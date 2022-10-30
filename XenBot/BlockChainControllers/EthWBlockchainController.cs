@@ -15,15 +15,15 @@ using XenBot.Entities;
 
 namespace XenBot.BlockChainControllers
 {
-    public class EthBlockchainController : IBlockchainController
+    public class EthWBlockchainController : IBlockchainController
     {
         private readonly string _provider;
         private readonly Web3 _web3;
 
-        public string ChainName { get => "ETH"; }
+        public string ChainName { get => "EthereumPOW"; }
         public string Provider { get; init; }
 
-        public EthBlockchainController(string provider)
+        public EthWBlockchainController(string provider)
         {
             _provider = provider;
             _web3 = new Web3(provider);
@@ -38,6 +38,28 @@ namespace XenBot.BlockChainControllers
             decimal priority = gasPriceM + (gasPriceM * percentage);
             GasPrice gp = new GasPrice() { Price = gasPrice.Value, Priority = new BigInteger(priority) };
             return gp;
+        }
+
+        public async Task WaitForCoinsToTransfer(string address, BigInteger expected)
+        {
+            DateTime timeout = DateTime.Now.AddMinutes(5);
+
+            while (true)
+            {
+                var bal = await Getbalance(address);
+
+                if(bal >= expected)
+                {
+                    break;
+                }
+
+                if(DateTime.Now >= timeout)
+                {
+                    throw new Exception("waiting too long for transfer of coins");
+                }
+
+                await Task.Delay(1000);
+            }
         }
 
         public async Task<BigInteger> Getbalance(string address)
@@ -88,11 +110,6 @@ namespace XenBot.BlockChainControllers
             }
 
             return success;
-        }
-
-        public async Task WaitForCoinsToTransfer(string address, BigInteger expected)
-        {
-            await Task.Delay(1);
         }
 
         public async Task<decimal> LoadBalance(string address)

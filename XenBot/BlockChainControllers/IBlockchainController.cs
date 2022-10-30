@@ -15,6 +15,7 @@ namespace XenBot.BlockChainControllers
         public Task<BigInteger> Getbalance(string address);
         public Task<BigInteger> EstimateCoinTransferGas(string from, string to, BigInteger amount);
         public Task<bool> TransferCoins(Nethereum.Web3.Accounts.Account fromAccount, string to, BigInteger amount, int tip, BigInteger gas, GasPrice gasPrice);
+        public Task WaitForCoinsToTransfer(string address, BigInteger expected);
         public string ChainName { get; }
         public string Provider { get; init; }
     }
