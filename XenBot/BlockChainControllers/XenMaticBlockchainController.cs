@@ -16,6 +16,7 @@ using Nethereum.HdWallet;
 using Nethereum.Hex.HexTypes;
 using Nethereum.RPC.Eth.DTOs;
 using XenBot.Entities;
+using Nethereum.Model;
 
 namespace XenBot
 {
@@ -69,6 +70,30 @@ namespace XenBot
             var globalRankFunction = _contract.GetFunction("globalRank");
             long rank = await globalRankFunction.CallAsync<long>();
             return rank;
+        }
+
+        public async Task WaitForConfirmations(Entities.Transaction transaction)
+        {
+            if(transaction == null)
+            {
+                return;
+            }
+
+            Web3 web3 = new Web3(_provider);
+
+            while (true)
+            {
+                await Task.Delay(2000);
+
+                var latestBlockNumber = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
+
+                var confirmations = latestBlockNumber.Value - transaction.BlockNumber;
+
+                if(confirmations >= 2)
+                {
+                    break;
+                }
+            }
         }
 
         public async Task<BigInteger> EstimateGasToClaim(string address, int days)

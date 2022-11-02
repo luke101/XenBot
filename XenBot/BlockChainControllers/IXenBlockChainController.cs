@@ -18,6 +18,7 @@ namespace XenBot.BlockChainControllers
         public Task<bool> ClaimRank(Nethereum.Web3.Accounts.Account account, int days, BigInteger gas, GasPrice gasPrice);
         public Task<bool> MintRewardAndShare(Nethereum.Web3.Accounts.Account account, string address, BigInteger gas, GasPrice gasPrice);
         public Task<BigInteger> EstimateGasToMintReward(string mintAddress, string mainaddress);
+        public Task WaitForConfirmations(Transaction transaction);
         public long GetGrossReward(long globalRank, long amplifier, long term, long eaa, long rank);
         public Task<long> GetGlobalRank();
     }

@@ -15,15 +15,15 @@ using XenBot.Entities;
 
 namespace XenBot.BlockChainControllers
 {
-    public class BscBlockchainController : IBlockchainController
+    public class DogechainBlockchainController : IBlockchainController
     {
         private readonly string _provider;
         private readonly Web3 _web3;
 
-        public string ChainName { get => "BSC"; }
+        public string ChainName { get => "Dogechain"; }
         public string Provider { get; init; }
 
-        public BscBlockchainController(string provider)
+        public DogechainBlockchainController(string provider)
         {
             _provider = provider;
             _web3 = new Web3(provider);
@@ -90,7 +90,7 @@ namespace XenBot.BlockChainControllers
 
                 success = transactionReceipt.Succeeded(true);
 
-                if(success == false)
+                if (success == false)
                 {
                     throw new Exception("Failed transferring coins");
                 }

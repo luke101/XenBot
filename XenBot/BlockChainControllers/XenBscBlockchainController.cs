@@ -62,6 +62,11 @@ namespace XenBot
             return rank;
         }
 
+        public async Task WaitForConfirmations(Entities.Transaction transaction)
+        {
+            await Task.Delay(0);
+        }
+
         public async Task<long> GetCurrentMaxTerm()
         {
             var getCurrentMaxTermFunc = _contract.GetFunction("getCurrentMaxTerm");

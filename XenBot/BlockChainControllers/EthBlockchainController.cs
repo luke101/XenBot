@@ -58,11 +58,13 @@ namespace XenBot.BlockChainControllers
             return estimate.Value;
         }
 
-        public async Task<bool> TransferCoins(Nethereum.Web3.Accounts.Account fromAccount, string to, BigInteger amount, int tip, BigInteger gas, GasPrice gasPrice)
+        public async Task<Entities.Transaction?> TransferCoins(Nethereum.Web3.Accounts.Account fromAccount, string to, BigInteger amount, int tip, BigInteger gas, GasPrice gasPrice)
         {
+            Entities.Transaction? transaction = null;
+
             if (amount <= new BigInteger(0))
             {
-                return true;
+                return transaction;
             }
 
             bool success = true;
@@ -70,6 +72,8 @@ namespace XenBot.BlockChainControllers
             Web3 web3 = new Web3(fromAccount, _provider);
 
             web3.TransactionManager.UseLegacyAsDefault = true;
+
+            transaction = new Entities.Transaction();
 
             if (amount > new BigInteger(0))
             {
@@ -79,15 +83,23 @@ namespace XenBot.BlockChainControllers
                     To = to,
                     Value = new HexBigInteger(amount),
                     Gas = new HexBigInteger(gas),
-                    GasPrice = new HexBigInteger(gasPrice.Price)
+                    GasPrice = new HexBigInteger(gasPrice.Priority)
                 };
 
                 var transactionReceipt = await web3.Eth.TransactionManager.SendTransactionAndWaitForReceiptAsync(transactionInput, null);
 
                 success = transactionReceipt.Succeeded(true);
+
+                if (success == false)
+                {
+                    throw new Exception("Failed transferring coins");
+                }
+
+                transaction.BlockNumber = transactionReceipt.BlockNumber.Value;
+                transaction.TransactionHash = transaction.TransactionHash;
             }
 
-            return success;
+            return transaction;
         }
 
         public async Task WaitForCoinsToTransfer(string address, BigInteger expected)

@@ -122,7 +122,7 @@ namespace XenBot
             MATICTOT.Text = totals.ContainsKey("MATIC") ? totals["MATIC"].ToString() : "0";
             FANTOMTOT.Text = totals.ContainsKey("Fantom") ? totals["Fantom"].ToString() : "0";
             ETHWTOT.Text = totals.ContainsKey("EthereumPOW") ? totals["EthereumPOW"].ToString() : "0";
-            
+            DCTOT.Text = totals.ContainsKey("Dogechain") ? totals["Dogechain"].ToString() : "0";
         }
 
         private async Task LoadInfo()
@@ -165,6 +165,12 @@ namespace XenBot
                 _blockchainController = _blockchainControllerFactory.CreateEthWBlockchainController();
                 _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenEthWBlockchainController();
                 _webController = _webControllerFactory.CreateEthWWebController();
+            }
+            else if (cbBlockChain.SelectedIndex == 5)
+            {
+                _blockchainController = _blockchainControllerFactory.CreateDogechainBlockchainController();
+                _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenDogechainBlockchainController();
+                _webController = _webControllerFactory.CreateDogechainWebController();
             }
         }
 
@@ -353,8 +359,9 @@ namespace XenBot
                             
                             BigInteger amountToSend = mintAccountBalance >= claimRankTransactionFee ? new BigInteger(0) : claimRankTransactionFee - mintAccountBalance;
 
-                            await SendMoneyToMintAccount(accountId, _wallet, amountToSend, gasPrice, transferGas);
-                            await _blockchainController.WaitForCoinsToTransfer(_wallet.GetAccount(accountId).Address, mintAccountBalance + amountToSend);
+                            //await SendMoneyToMintAccount(accountId, _wallet, amountToSend, gasPrice, transferGas);
+                            var transaction = await _blockchainController.TransferCoins(_wallet.GetAccount(0), _wallet.GetAccount(accountId).Address, amountToSend, _priorityFee, transferGas, gasPrice);
+                            await _xenBlockchainController.WaitForConfirmations(transaction);
                             await _xenBlockchainController.ClaimRank(_wallet.GetAccount(accountId), termDays, claimRankGas, gasPrice);
                             
                             walletsCreated++;
@@ -469,23 +476,16 @@ namespace XenBot
         //    await _xenBlockchainController.ClaimRank(wallet.GetAccount(accountId), termDays, _priorityFee);
         //}
 
-        private async Task<bool> SendMoneyToMintAccount(int accountId, Wallet wallet, BigInteger amountToSend, GasPrice gasPrice, BigInteger gas)
-        {
-            //No need to send money to main account
-            if(accountId == 0)
-            {
-                return true;
-            }
+        //private async Task<bool> SendMoneyToMintAccount(int accountId, Wallet wallet, BigInteger amountToSend, GasPrice gasPrice, BigInteger gas)
+        //{
+        //    //No need to send money to main account
+        //    if(accountId == 0)
+        //    {
+        //        return null;
+        //    }
 
-            bool success = true;
-
-            if (amountToSend > new BigInteger(0))
-            {
-                success = await _blockchainController.TransferCoins(wallet.GetAccount(0), _wallet.GetAccount(accountId).Address, amountToSend, _priorityFee, gas, gasPrice);
-            }
-
-            return success;
-        }
+        //    return await _blockchainController.TransferCoins(wallet.GetAccount(0), _wallet.GetAccount(accountId).Address, amountToSend, _priorityFee, gas, gasPrice);
+        //}
 
         private void Button_Click_3(object sender, RoutedEventArgs e)
         {
@@ -741,7 +741,8 @@ namespace XenBot
 
                                 BigInteger amountToSend = mintAccountBalance >= mintRewardTransactionFee ? new BigInteger(0) : mintRewardTransactionFee - mintAccountBalance;
 
-                                await SendMoneyToMintAccount(expiredAccount.AccountId, _wallet, amountToSend, gasPrice, transferGas);
+                                //await SendMoneyToMintAccount(expiredAccount.AccountId, _wallet, amountToSend, gasPrice, transferGas);
+                                await _blockchainController.TransferCoins(_wallet.GetAccount(0), expiredAccount.Address, amountToSend, _priorityFee, transferGas, gasPrice);
                                 await _xenBlockchainController.MintRewardAndShare(mintAccount, mainAccount.Address, claimRewardGas, gasPrice);
 
                                 _dataController.DeleteClaimByIdAndChain(expiredAccount.AccountId, chain);

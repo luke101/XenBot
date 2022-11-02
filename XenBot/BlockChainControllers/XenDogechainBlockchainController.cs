@@ -19,7 +19,7 @@ using XenBot.Entities;
 
 namespace XenBot
 {
-    public class XenFantomBlockchainController : IXenBlockChainController
+    public class XenDogechainBlockchainController : IXenBlockChainController
     {
         private IBlockchainController _blockchainController;
 
@@ -28,7 +28,7 @@ namespace XenBot
         private readonly string _abi;
         private readonly Nethereum.Contracts.Contract _contract;
 
-        public XenFantomBlockchainController(IBlockchainController blockchainController, string abi, string contractAddress)
+        public XenDogechainBlockchainController(IBlockchainController blockchainController, string abi, string contractAddress)
         {
             _blockchainController = blockchainController;
 
@@ -53,6 +53,34 @@ namespace XenBot
             var reward128 = log128 * (double)amplifier * (double)term * (double)eea2;
             var r = reward128 / (1_000);
             return (long)r;
+        }
+
+        public async Task WaitForConfirmations(Entities.Transaction transaction)
+        {
+            if (transaction == null)
+            {
+                return;
+            }
+
+            Web3 web3 = new Web3(_provider);
+
+            var currentBlockNumber = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
+
+            while (true)
+            {
+                await Task.Delay(2000);
+
+                var latestBlockNumber = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
+
+                var confirmations = latestBlockNumber.Value - currentBlockNumber;
+
+                if (confirmations >= 4)
+                {
+                    break;
+                }
+
+                
+            }
         }
 
         public async Task<long> GetGlobalRank()
@@ -83,11 +111,6 @@ namespace XenBot
             var claimRankFunction = _contract.GetFunction("claimMintRewardAndShare");
             var gas = await claimRankFunction.EstimateGasAsync(mintAddress, null, null, mainaddress, 100);
             return gas.Value;
-        }
-
-        public async Task WaitForConfirmations(Entities.Transaction transaction)
-        {
-            await Task.Delay(0);
         }
 
         public async Task<bool> MintRewardAndShare(Nethereum.Web3.Accounts.Account account, string address, BigInteger gas, GasPrice gasPrice)

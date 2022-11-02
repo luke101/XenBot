@@ -17,6 +17,7 @@ using Nethereum.Hex.HexTypes;
 using Nethereum.RPC.Eth.DTOs;
 using System.Net;
 using XenBot.Entities;
+using System.Reflection;
 
 namespace XenBot
 {
@@ -44,6 +45,11 @@ namespace XenBot
             var userMintFunction = _contract.GetFunction("userMints");
             var userMint = await userMintFunction.CallAsync<UserMintOutputDTO>(address);
             return userMint;
+        }
+
+        public async Task WaitForConfirmations(Entities.Transaction transaction)
+        {
+            await Task.Delay(0);
         }
 
         public long GetGrossReward(long globalRank, long amplifier, long term, long eaa, long rank)

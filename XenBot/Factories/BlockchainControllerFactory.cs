@@ -18,7 +18,7 @@ namespace XenBot.Factories
         {
             //https://rpc.flashbots.net/
             //return new EthBlockchainController("https://mainnet.infura.io/v3/8a63c898226d41558163dadbf3c6b7c0");
-            return new EthBlockchainController("https://rpc.flashbots.net/");
+            return new EthBlockchainController("https://nodes.mewapi.io/rpc/eth");
         }
 
         public IBlockchainController CreateMaticBlockchainController()
@@ -34,6 +34,11 @@ namespace XenBot.Factories
         public IBlockchainController CreateEthWBlockchainController()
         {
             return new EthWBlockchainController("https://mainnet.ethereumpow.org");
+        }
+
+        public IBlockchainController CreateDogechainBlockchainController()
+        {
+            return new DogechainBlockchainController("https://rpc-sg.dogechain.dog");
         }
     }
 }

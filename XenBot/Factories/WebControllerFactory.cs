@@ -33,5 +33,10 @@ namespace XenBot.Factories
         {
             return new EthWWebController();
         }
+
+        public IWebController CreateDogechainWebController()
+        {
+            return new DogechainWebController();
+        }
     }
 }

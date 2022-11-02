@@ -107,6 +107,34 @@ namespace XenBot
             return success;
         }
 
+        public async Task WaitForConfirmations(Entities.Transaction transaction)
+        {
+            if (transaction == null)
+            {
+                return;
+            }
+
+            Web3 web3 = new Web3(_provider);
+
+            var currentBlockNumber = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
+
+            while (true)
+            {
+                await Task.Delay(2000);
+
+                var latestBlockNumber = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
+
+                var confirmations = latestBlockNumber.Value - currentBlockNumber;
+
+                if (confirmations >= 2)
+                {
+                    break;
+                }
+
+
+            }
+        }
+
         public async Task<bool> ClaimRank(Nethereum.Web3.Accounts.Account account, int days, BigInteger gas, GasPrice gasPrice)
         {
             bool success = true;
