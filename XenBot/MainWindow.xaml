@@ -95,7 +95,7 @@
                 <TextBlock Text="Term, Days:" HorizontalAlignment="Right" FontFamily="Arial Black" Foreground="Gray" FontSize="25" Margin="0 0 5 5" Grid.Row="4" Grid.Column="0" />
                 <TextBox x:Name="TermDays" Text="" Grid.Column="1" FontSize="25" Margin="0 0 0 5" Grid.Row="4" />
                 <TextBlock Text="Wallet Counts:" HorizontalAlignment="Right" FontFamily="Arial Black" Foreground="Gray" FontSize="25" Margin="0 0 5 5" Grid.Row="5" Grid.Column="0" />
-                <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Grid.Column="1" Margin="0 0 0 5" Grid.Row="5">
+                <WrapPanel VerticalAlignment="Center" Orientation="Horizontal" Grid.Column="1" Margin="0 0 0 5" Grid.Row="5">
                     <Grid Margin="0 0 8 0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="auto" />
@@ -144,7 +144,7 @@
                         <TextBlock VerticalAlignment="Center" Text="Dogechain:" FontFamily="Arial Black" Foreground="DarkGreen" FontSize="20" Margin="0 0 3 0" Grid.Column="0" />
                         <TextBlock x:Name="DCTOT" VerticalAlignment="Center" FontFamily="Arial Black" FontSize="20"  Grid.Column="1" />
                     </Grid>
-                </StackPanel>
+                </WrapPanel>
 
                 <TextBlock Text="Estimated Tokens:" VerticalAlignment="Center" HorizontalAlignment="Right" FontFamily="Arial Black" Foreground="Gray" FontSize="25" Margin="0 0 5 5" Grid.Row="6" Grid.Column="0" />
 
