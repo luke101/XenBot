@@ -6,7 +6,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace XenBot.InputDTOs
+namespace XenBot.DTOs
 {
     [FunctionOutput]
     public class UserMintOutputDTO : IFunctionOutputDTO

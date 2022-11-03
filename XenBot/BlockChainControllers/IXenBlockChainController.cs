@@ -6,7 +6,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using XenBot.Entities;
-using XenBot.InputDTOs;
+using XenBot.DTOs;
 
 namespace XenBot.BlockChainControllers
 {

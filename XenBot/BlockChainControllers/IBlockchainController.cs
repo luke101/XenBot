@@ -18,5 +18,6 @@ namespace XenBot.BlockChainControllers
         public Task WaitForCoinsToTransfer(string address, BigInteger expected);
         public string ChainName { get; }
         public string Provider { get; init; }
+        public int ChainId { get; }
     }
 }

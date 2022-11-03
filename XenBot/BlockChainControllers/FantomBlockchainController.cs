@@ -21,6 +21,7 @@ namespace XenBot.BlockChainControllers
         private readonly Web3 _web3;
 
         public string ChainName { get => "Fantom"; }
+        public int ChainId { get => 250; }
         public string Provider { get; init; }
 
         public FantomBlockchainController(string provider)

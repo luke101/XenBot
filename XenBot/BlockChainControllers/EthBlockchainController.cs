@@ -21,6 +21,7 @@ namespace XenBot.BlockChainControllers
         private readonly Web3 _web3;
 
         public string ChainName { get => "ETH"; }
+        public int ChainId { get => 1; }
         public string Provider { get; init; }
 
         public EthBlockchainController(string provider)

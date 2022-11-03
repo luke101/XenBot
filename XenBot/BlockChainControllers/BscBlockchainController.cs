@@ -21,6 +21,7 @@ namespace XenBot.BlockChainControllers
         private readonly Web3 _web3;
 
         public string ChainName { get => "BSC"; }
+        public int ChainId { get => 56; }
         public string Provider { get; init; }
 
         public BscBlockchainController(string provider)

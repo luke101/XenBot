@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using XenBot.InputDTOs;
+using XenBot.DTOs;
 using Nethereum.Contracts;
 using System.Security.Principal;
 using System.Diagnostics.Contracts;
@@ -109,6 +109,7 @@ namespace XenBot
 
         public async Task WaitForConfirmations(Entities.Transaction transaction)
         {
+            return;
             if (transaction == null)
             {
                 return;
@@ -126,7 +127,7 @@ namespace XenBot
 
                 var confirmations = latestBlockNumber.Value - currentBlockNumber;
 
-                if (confirmations >= 2)
+                if (confirmations >= 4)
                 {
                     break;
                 }
@@ -138,23 +139,65 @@ namespace XenBot
         public async Task<bool> ClaimRank(Nethereum.Web3.Accounts.Account account, int days, BigInteger gas, GasPrice gasPrice)
         {
             bool success = true;
-            Web3 web3 = new Web3(account, _provider);
-            web3.TransactionManager.UseLegacyAsDefault = true;
-            var contract = web3.Eth.GetContract(_abi, _contract.Address);
-            var claimRankFunction = contract.GetFunction("claimRank");
-            var receipt = await claimRankFunction.SendTransactionAndWaitForReceiptAsync(account.Address, new HexBigInteger(gas), new HexBigInteger(gasPrice.Priority), value:null, receiptRequestCancellationToken:null, new BigInteger(days));
 
-            if (receipt == null)
+            int retries = 0;
+
+            while (true)
             {
-                throw new Exception("Transaction failed");
-            }
+                try
+                {
+                    var accountWithChainId = new Nethereum.Web3.Accounts.Account(account.PrivateKey, _blockchainController.ChainId);
 
-            if (receipt.Succeeded(true) == false)
-            {
-                throw new Exception("Transaction failed");
-            }
+                    Web3 web3 = new Web3(accountWithChainId, _provider);
 
-            return success;
+                    var claimRankHandler = web3.Eth.GetContractTransactionHandler<ClaimRankFunction>();
+
+                    var nonce = await accountWithChainId.NonceService.GetNextNonceAsync();
+
+                    ClaimRankFunction input = new ClaimRankFunction()
+                    {
+                        FromAddress = accountWithChainId.Address,
+                        Term = days,
+                        Gas = gas,
+                        GasPrice = gasPrice.Price,
+                        MaxFeePerGas = gasPrice.Priority,
+                        MaxPriorityFeePerGas = gasPrice.Priority,
+                        Nonce = nonce
+                    };
+
+                    input.SetTransactionType1559();
+
+                    var receipt = await claimRankHandler.SendRequestAndWaitForReceiptAsync(_contract.Address, input, null);
+
+                    if (receipt == null)
+                    {
+                        throw new Exception("Transaction failed");
+                    }
+
+                    if (receipt.Succeeded(true) == false)
+                    {
+                        throw new Exception("Transaction failed");
+                    }
+
+                    return success;
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.Contains("funds") == false)
+                    {
+                        throw;
+                    }
+
+                    if(retries >= 30)
+                    {
+                        throw new Exception("Retried claiming too many times");
+                    }
+
+                    await Task.Delay(3000);
+
+                    retries++;
+                }
+            }
         }
     }
 }

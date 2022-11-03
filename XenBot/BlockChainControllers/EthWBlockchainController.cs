@@ -21,6 +21,7 @@ namespace XenBot.BlockChainControllers
         private readonly Web3 _web3;
 
         public string ChainName { get => "EthereumPOW"; }
+        public int ChainId { get => 10001; }
         public string Provider { get; init; }
 
         public EthWBlockchainController(string provider)
@@ -34,7 +35,7 @@ namespace XenBot.BlockChainControllers
         {
             HexBigInteger gasPrice = await _web3.Eth.GasPrice.SendRequestAsync();
             decimal gasPriceM = (decimal)gasPrice.Value;
-            decimal percentage = tipInPercent / 100;
+            decimal percentage = tipInPercent / 100m;
             decimal priority = gasPriceM + (gasPriceM * percentage);
             GasPrice gp = new GasPrice() { Price = gasPrice.Value, Priority = new BigInteger(priority) };
             return gp;
@@ -93,6 +94,7 @@ namespace XenBot.BlockChainControllers
             bool success = true;
 
             Web3 web3 = new Web3(fromAccount, _provider);
+            
 
             web3.TransactionManager.UseLegacyAsDefault = true;
 

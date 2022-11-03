@@ -23,7 +23,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Nethereum.RPC.Eth.DTOs;
-using XenBot.InputDTOs;
+using XenBot.DTOs;
 using Nethereum.Model;
 using Nethereum.Web3.Accounts;
 using Nethereum.Web3.Accounts.Managed;
@@ -356,12 +356,9 @@ namespace XenBot
                                 break;
                             }
 
-                            
                             BigInteger amountToSend = mintAccountBalance >= claimRankTransactionFee ? new BigInteger(0) : claimRankTransactionFee - mintAccountBalance;
-
-                            //await SendMoneyToMintAccount(accountId, _wallet, amountToSend, gasPrice, transferGas);
                             var transaction = await _blockchainController.TransferCoins(_wallet.GetAccount(0), _wallet.GetAccount(accountId).Address, amountToSend, _priorityFee, transferGas, gasPrice);
-                            await _xenBlockchainController.WaitForConfirmations(transaction);
+                            //await _xenBlockchainController.WaitForConfirmations(transaction);
                             await _xenBlockchainController.ClaimRank(_wallet.GetAccount(accountId), termDays, claimRankGas, gasPrice);
                             
                             walletsCreated++;

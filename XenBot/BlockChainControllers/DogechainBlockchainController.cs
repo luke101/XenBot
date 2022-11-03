@@ -21,6 +21,7 @@ namespace XenBot.BlockChainControllers
         private readonly Web3 _web3;
 
         public string ChainName { get => "Dogechain"; }
+        public int ChainId { get => 2000; }
         public string Provider { get; init; }
 
         public DogechainBlockchainController(string provider)

@@ -1,4 +1,5 @@
-﻿using Nethereum.HdWallet;
+﻿using Nethereum.Contracts.Standards.ERC20.ContractDefinition;
+using Nethereum.HdWallet;
 using Nethereum.Hex.HexTypes;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Web3;
@@ -21,6 +22,7 @@ namespace XenBot.BlockChainControllers
         private readonly Web3 _web3;
 
         public string ChainName { get => "MATIC"; }
+        public int ChainId { get => 137; }
         public string Provider { get; init; }
 
         public MaticBlockchainController(string provider)
@@ -89,26 +91,37 @@ namespace XenBot.BlockChainControllers
                 return transaction;
             }
 
+
+
             bool success = true;
 
-            Web3 web3 = new Web3(fromAccount, _provider);
+            Nethereum.Web3.Accounts.Account account = new Nethereum.Web3.Accounts.Account(fromAccount.PrivateKey, 137);
 
-            web3.TransactionManager.UseLegacyAsDefault = true;
+            Web3 web3 = new Web3(account, _provider);
+
+            var ether = Web3.Convert.FromWei(amount);
+            var gasPriceGwei = Web3.Convert.FromWei(gasPrice.Price, Nethereum.Util.UnitConversion.EthUnit.Gwei);
+
+            //var transferFunction = new TransferFunction();
+            //transferFunction.FromAddress = fromAccount.Address;
+            //transferFunction.To = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+            //transferFunction.Value = 500;
 
             transaction = new Entities.Transaction();
 
             if (amount > new BigInteger(0))
             {
-                var transactionInput = new TransactionInput
-                {
-                    From = fromAccount.Address,
-                    To = to,
-                    Value = new HexBigInteger(amount),
-                    Gas = new HexBigInteger(gas),
-                    GasPrice = new HexBigInteger(gasPrice.Priority)
-                };
+                //var transactionInput = new TransactionInput
+                //{
+                //    From = fromAccount.Address,
+                //    To = to,
+                //    Value = new HexBigInteger(amount),
+                //    Gas = new HexBigInteger(gas),
+                //    GasPrice = new HexBigInteger(gasPrice.Price),
+                //    MaxFeePerGas = new HexBigInteger(gasPrice.Priority)
+                //};
 
-                var transactionReceipt = await web3.Eth.TransactionManager.SendTransactionAndWaitForReceiptAsync(transactionInput, null);
+                var transactionReceipt = await web3.Eth.GetEtherTransferService().TransferEtherAndWaitForReceiptAsync(to, ether, gasPriceGwei, gas, null, null);
 
                 success = transactionReceipt.Succeeded(true);
 

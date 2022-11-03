@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using XenBot.InputDTOs;
+using XenBot.DTOs;
 using Nethereum.Contracts;
 using System.Security.Principal;
 using System.Diagnostics.Contracts;
