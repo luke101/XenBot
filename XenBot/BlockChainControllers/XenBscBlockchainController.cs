@@ -115,23 +115,48 @@ namespace XenBot
         public async Task<bool> ClaimRank(Nethereum.Web3.Accounts.Account account, int days, BigInteger gas, GasPrice gasPrice)
         {
             bool success = true;
-            Web3 web3 = new Web3(account, _provider);
-            web3.TransactionManager.UseLegacyAsDefault = true;
-            var contract = web3.Eth.GetContract(_abi, _contract.Address);
-            var claimRankFunction = contract.GetFunction("claimRank");
-            var receipt = await claimRankFunction.SendTransactionAndWaitForReceiptAsync(account.Address, new HexBigInteger(gas), new HexBigInteger(gasPrice.Priority), value:null, receiptRequestCancellationToken:null, new BigInteger(days));
 
-            if (receipt == null)
+            int retries = 0;
+
+            while (true)
             {
-                throw new Exception("Transaction failed");
-            }
+                try
+                {
+                    Web3 web3 = new Web3(account, _provider);
+                    web3.TransactionManager.UseLegacyAsDefault = true;
+                    var contract = web3.Eth.GetContract(_abi, _contract.Address);
+                    var claimRankFunction = contract.GetFunction("claimRank");
+                    var receipt = await claimRankFunction.SendTransactionAndWaitForReceiptAsync(account.Address, new HexBigInteger(gas), new HexBigInteger(gasPrice.Priority), value: null, receiptRequestCancellationToken: null, new BigInteger(days));
 
-            if (receipt.Succeeded(true) == false)
-            {
-                throw new Exception("Transaction failed");
-            }
+                    if (receipt == null)
+                    {
+                        throw new Exception("Transaction failed");
+                    }
 
-            return success;
+                    if (receipt.Succeeded(true) == false)
+                    {
+                        throw new Exception("Transaction failed");
+                    }
+
+                    return success;
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.Contains("funds") == false)
+                    {
+                        throw;
+                    }
+
+                    if (retries >= 30)
+                    {
+                        throw new Exception("Retried claiming too many times");
+                    }
+
+                    await Task.Delay(3000);
+
+                    retries++;
+                }
+            }
         }
     }
 }

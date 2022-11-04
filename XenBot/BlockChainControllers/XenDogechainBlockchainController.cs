@@ -145,28 +145,11 @@ namespace XenBot
             {
                 try
                 {
-                    var accountWithChainId = new Nethereum.Web3.Accounts.Account(account.PrivateKey, _blockchainController.ChainId);
-
-                    Web3 web3 = new Web3(accountWithChainId, _provider);
-
-                    var claimRankHandler = web3.Eth.GetContractTransactionHandler<ClaimRankFunction>();
-
-                    var nonce = await accountWithChainId.NonceService.GetNextNonceAsync();
-
-                    ClaimRankFunction input = new ClaimRankFunction()
-                    {
-                        FromAddress = accountWithChainId.Address,
-                        Term = days,
-                        Gas = gas,
-                        GasPrice = gasPrice.Price,
-                        MaxFeePerGas = gasPrice.Priority,
-                        MaxPriorityFeePerGas = gasPrice.Priority,
-                        Nonce = nonce
-                    };
-
-                    input.SetTransactionType1559();
-
-                    var receipt = await claimRankHandler.SendRequestAndWaitForReceiptAsync(_contract.Address, input, null);
+                    Web3 web3 = new Web3(account, _provider);
+                    web3.TransactionManager.UseLegacyAsDefault = true;
+                    var contract = web3.Eth.GetContract(_abi, _contract.Address);
+                    var claimRankFunction = contract.GetFunction("claimRank");
+                    var receipt = await claimRankFunction.SendTransactionAndWaitForReceiptAsync(account.Address, new HexBigInteger(gas), new HexBigInteger(gasPrice.Priority), value: null, receiptRequestCancellationToken: null, new BigInteger(days));
 
                     if (receipt == null)
                     {
