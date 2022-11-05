@@ -358,7 +358,7 @@ namespace XenBot
 
                             BigInteger amountToSend = mintAccountBalance >= claimRankTransactionFee ? new BigInteger(0) : claimRankTransactionFee - mintAccountBalance;
                             var transaction = await _blockchainController.TransferCoins(_wallet.GetAccount(0), _wallet.GetAccount(accountId).Address, amountToSend, _priorityFee, transferGas, gasPrice);
-                            //await _xenBlockchainController.WaitForConfirmations(transaction);
+                            await _xenBlockchainController.WaitForConfirmations(transaction);
                             await _xenBlockchainController.ClaimRank(_wallet.GetAccount(accountId), termDays, claimRankGas, gasPrice);
                             
                             walletsCreated++;

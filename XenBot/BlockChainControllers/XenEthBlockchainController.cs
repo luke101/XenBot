@@ -49,7 +49,26 @@ namespace XenBot
 
         public async Task WaitForConfirmations(Entities.Transaction transaction)
         {
-            await Task.Delay(0);
+            if (transaction == null)
+            {
+                return;
+            }
+
+            Web3 web3 = new Web3(_provider);
+
+            while (true)
+            {
+                await Task.Delay(2000);
+
+                var latestBlockNumber = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
+
+                var confirmations = latestBlockNumber.Value - transaction.BlockNumber;
+
+                if (confirmations >= 1)
+                {
+                    break;
+                }
+            }
         }
 
         public long GetGrossReward(long globalRank, long amplifier, long term, long eaa, long rank)
@@ -130,17 +149,13 @@ namespace XenBot
 
                     var claimRankHandler = web3.Eth.GetContractTransactionHandler<ClaimRankFunction>();
 
-                    var nonce = await accountWithChainId.NonceService.GetNextNonceAsync();
-
                     ClaimRankFunction input = new ClaimRankFunction()
                     {
                         FromAddress = accountWithChainId.Address,
                         Term = days,
                         Gas = gas,
-                        GasPrice = gasPrice.Price,
                         MaxFeePerGas = gasPrice.Priority,
-                        MaxPriorityFeePerGas = gasPrice.Priority,
-                        Nonce = nonce
+                        MaxPriorityFeePerGas = gasPrice.Priority
                     };
 
                     input.SetTransactionType1559();

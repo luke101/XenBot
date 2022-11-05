@@ -127,7 +127,7 @@ namespace XenBot
 
                 var confirmations = latestBlockNumber.Value - currentBlockNumber;
 
-                if (confirmations >= 4)
+                if (confirmations >= 1)
                 {
                     break;
                 }
@@ -152,17 +152,13 @@ namespace XenBot
 
                     var claimRankHandler = web3.Eth.GetContractTransactionHandler<ClaimRankFunction>();
 
-                    var nonce = await accountWithChainId.NonceService.GetNextNonceAsync();
-
                     ClaimRankFunction input = new ClaimRankFunction()
                     {
                         FromAddress = accountWithChainId.Address,
                         Term = days,
                         Gas = gas,
-                        GasPrice = gasPrice.Price,
                         MaxFeePerGas = gasPrice.Priority,
-                        MaxPriorityFeePerGas = gasPrice.Priority,
-                        Nonce = nonce
+                        MaxPriorityFeePerGas = gasPrice.Priority
                     };
 
                     input.SetTransactionType1559();

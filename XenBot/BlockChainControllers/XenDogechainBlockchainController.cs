@@ -74,12 +74,10 @@ namespace XenBot
 
                 var confirmations = latestBlockNumber.Value - currentBlockNumber;
 
-                if (confirmations >= 4)
+                if (confirmations >= 1)
                 {
                     break;
                 }
-
-                
             }
         }
 
