@@ -21,7 +21,7 @@ using System.Reflection;
 
 namespace XenBot
 {
-    public class XenAvalancheBlockchainController : IXenBlockChainController
+    public class XenMoonbeamBlockchainController : IXenBlockChainController
     {
         private IBlockchainController _blockchainController;
 
@@ -30,7 +30,7 @@ namespace XenBot
         private readonly string _abi;
         private readonly Nethereum.Contracts.Contract _contract;
 
-        public XenAvalancheBlockchainController(IBlockchainController blockchainController, string abi, string contractAddress)
+        public XenMoonbeamBlockchainController(IBlockchainController blockchainController, string abi, string contractAddress)
         {
             _blockchainController = blockchainController;
 

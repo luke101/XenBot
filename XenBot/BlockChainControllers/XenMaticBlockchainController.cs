@@ -75,7 +75,10 @@ namespace XenBot
 
         public async Task WaitForConfirmations(Entities.Transaction transaction)
         {
-            if(transaction == null)
+            await Task.Delay(1500);
+            return;
+
+            if (transaction == null)
             {
                 return;
             }

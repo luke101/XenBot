@@ -23,7 +23,8 @@ namespace XenBot.Factories
 
         public IBlockchainController CreateMaticBlockchainController()
         {
-            return new MaticBlockchainController("https://polygon-rpc.com/");
+            //return new MaticBlockchainController("https://polygon-rpc.com/");
+            return new MaticBlockchainController("https://matic-mainnet-full-rpc.bwarelabs.com");
         }
 
         public IBlockchainController CreateFantomBlockchainController()
@@ -44,6 +45,11 @@ namespace XenBot.Factories
         public IBlockchainController CreateAvalancheBlockchainController()
         {
             return new AvalancheBlockchainController("https://api.avax.network/ext/bc/C/rpc");
+        }
+
+        public IBlockchainController CreateMoonbeamBlockchainController()
+        {
+            return new MoonbeamBlockchainController("https://rpc.ankr.com/moonbeam");
         }
     }
 }

@@ -124,6 +124,7 @@ namespace XenBot
             ETHWTOT.Text = totals.ContainsKey("EthereumPOW") ? totals["EthereumPOW"].ToString() : "0";
             DCTOT.Text = totals.ContainsKey("Dogechain") ? totals["Dogechain"].ToString() : "0";
             AVAXTOT.Text = totals.ContainsKey("Avalanche") ? totals["Avalanche"].ToString() : "0";
+            GLMRTOT.Text = totals.ContainsKey("Moonbeam") ? totals["Moonbeam"].ToString() : "0";
         }
 
         private async Task LoadInfo()
@@ -178,6 +179,12 @@ namespace XenBot
                 _blockchainController = _blockchainControllerFactory.CreateAvalancheBlockchainController();
                 _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenAvalancheBlockchainController();
                 _webController = _webControllerFactory.CreateAvalancheWebController();
+            }
+            else if (cbBlockChain.SelectedIndex == 7)
+            {
+                _blockchainController = _blockchainControllerFactory.CreateMoonbeamBlockchainController();
+                _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenMoonbeamBlockchainController();
+                _webController = _webControllerFactory.CreateMoonbeamWebController();
             }
         }
 
@@ -375,6 +382,7 @@ namespace XenBot
                             var data = await _xenBlockchainController.GetUserMints(address);
                             var tokens = _xenBlockchainController.GetGrossReward(_globalRank, (long)data.Amplifier, (long)data.Term, (long)data.EaaRate, (long)data.Rank);
                             _dataController.UpdateClaimInDB(accountId, claimExpire, address, chain, (long)data.Rank, (long)data.Amplifier, (long)data.EaaRate, (long)data.Term, tokens);
+                            await Task.Delay(2000);
                         }
                         else
                         {

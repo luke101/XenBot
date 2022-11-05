@@ -43,5 +43,10 @@ namespace XenBot.Factories
         {
             return new AvalancheWebController();
         }
+
+        public IWebController CreateMoonbeamWebController()
+        {
+            return new MoonbeamWebController();
+        }
     }
 }
