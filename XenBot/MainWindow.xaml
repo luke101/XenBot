@@ -39,6 +39,7 @@
                         <ComboBoxItem Content="Fantom" />
                         <ComboBoxItem Content="EthereumPOW" />
                         <ComboBoxItem Content="Dogechain" />
+                        <ComboBoxItem Content="Avalanche" />
                     </ComboBox>
                     <Button x:Name="btnRefreshData" Grid.Column="1" Margin="0 0 0 5" Content="Refresh Data" FontSize="25" VerticalAlignment="Center" Click="btnRefreshData_Click"></Button>
                 </Grid>
@@ -143,6 +144,14 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock VerticalAlignment="Center" Text="Dogechain:" FontFamily="Arial Black" Foreground="DarkGreen" FontSize="20" Margin="0 0 3 0" Grid.Column="0" />
                         <TextBlock x:Name="DCTOT" VerticalAlignment="Center" FontFamily="Arial Black" FontSize="20"  Grid.Column="1" />
+                    </Grid>
+                    <Grid Margin="0 0 8 0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto" />
+                            <ColumnDefinition Width="auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="Avalanche:" FontFamily="Arial Black" Foreground="DarkGray" FontSize="20" Margin="0 0 3 0" Grid.Column="0" />
+                        <TextBlock x:Name="AVAXTOT" VerticalAlignment="Center" FontFamily="Arial Black" FontSize="20"  Grid.Column="1" />
                     </Grid>
                 </WrapPanel>
 

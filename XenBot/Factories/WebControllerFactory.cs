@@ -38,5 +38,10 @@ namespace XenBot.Factories
         {
             return new DogechainWebController();
         }
+
+        public IWebController CreateAvalancheWebController()
+        {
+            return new AvalancheWebController();
+        }
     }
 }

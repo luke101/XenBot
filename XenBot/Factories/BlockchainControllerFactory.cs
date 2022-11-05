@@ -40,5 +40,10 @@ namespace XenBot.Factories
         {
             return new DogechainBlockchainController("https://rpc-sg.dogechain.dog");
         }
+
+        public IBlockchainController CreateAvalancheBlockchainController()
+        {
+            return new AvalancheBlockchainController("https://api.avax.network/ext/bc/C/rpc");
+        }
     }
 }

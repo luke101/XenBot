@@ -123,6 +123,7 @@ namespace XenBot
             FANTOMTOT.Text = totals.ContainsKey("Fantom") ? totals["Fantom"].ToString() : "0";
             ETHWTOT.Text = totals.ContainsKey("EthereumPOW") ? totals["EthereumPOW"].ToString() : "0";
             DCTOT.Text = totals.ContainsKey("Dogechain") ? totals["Dogechain"].ToString() : "0";
+            AVAXTOT.Text = totals.ContainsKey("Avalanche") ? totals["Avalanche"].ToString() : "0";
         }
 
         private async Task LoadInfo()
@@ -171,6 +172,12 @@ namespace XenBot
                 _blockchainController = _blockchainControllerFactory.CreateDogechainBlockchainController();
                 _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenDogechainBlockchainController();
                 _webController = _webControllerFactory.CreateDogechainWebController();
+            }
+            else if (cbBlockChain.SelectedIndex == 6)
+            {
+                _blockchainController = _blockchainControllerFactory.CreateAvalancheBlockchainController();
+                _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenAvalancheBlockchainController();
+                _webController = _webControllerFactory.CreateAvalancheWebController();
             }
         }
 
