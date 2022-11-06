@@ -63,7 +63,8 @@ namespace XenBot
         private Wallet _wallet;
         private bool cancelPressed = false;
         private long _globalRank = 1;
-        private List<Entities.Account> _accounts = new List<Entities.Account>();
+        private int _accountId = 0;
+        private List<Entities.Claim> _accounts = new List<Entities.Claim>();
         
         private BlockchainControllerFactory _blockchainControllerFactory;
         private XenBlockchainControllerFactory _xenBlockchainControllerFactory;
@@ -73,7 +74,10 @@ namespace XenBot
         private IWebController _webController;
         private DataController _dataController;
 
-        public ObservableCollection<AccountDG> _accountsDG = new ObservableCollection<AccountDG>();
+        public ObservableCollection<ClaimVM> Claims = new ObservableCollection<ClaimVM>();
+        public ObservableCollection<AccountVM> Accounts { get; set; }
+
+        public AccountVM SelectedAccount { get; set; }
 
         public MainWindow(string password)
         {
@@ -84,6 +88,8 @@ namespace XenBot
             _xenBlockchainControllerFactory = new XenBlockchainControllerFactory(_blockchainControllerFactory);
             _webControllerFactory = new WebControllerFactory();
             _dataController = new DataController();
+
+            Accounts = new ObservableCollection<AccountVM>();
         }
 
         private async void MainLoaded(object sender, RoutedEventArgs e)
@@ -92,15 +98,16 @@ namespace XenBot
             _dataController.AccountAdded += _dataController_AccountAdded;
             _dataController.AccountUpdated += _dataController_AccountUpdated;
             _dataController.AccountDeleted += _dataController_AccountDeleted;
-            AccountsGrid.ItemsSource = _accountsDG;
+            AccountsGrid.ItemsSource = Claims;
+            cbAccount.ItemsSource = Accounts;
             CancelBtn.IsEnabled = false;
 
             try
             {
+                LoadAccounts();
                 EnableApp(false);
                 LoadWallet();
                 await LoadInfo();
-                Setup();
                 RefreshGrid();
                 LoadTotals();
                 LoadTokens();
@@ -111,11 +118,32 @@ namespace XenBot
             }
         }
 
-        
+        private void LoadAccounts()
+        {
+            Accounts.Clear();
+
+            var accounts = _dataController.GetAllAccounts();
+
+            int counter = 0;
+            foreach (var account in accounts) 
+            { 
+                var accountVM = new AccountVM();
+                accountVM.Id = account.Id;
+                accountVM.Name = account.Name;
+                accountVM.Selected = counter == 0;
+                if(counter == 0)
+                {
+                    _accountId = account.Id;
+                    cbAccount.SelectedValue = account.Id.ToString();
+                }
+                Accounts.Add(accountVM);
+                counter++;
+            }
+        }
 
         private void LoadTotals()
         {
-            var totals = _dataController.AggregateAccountsByChain();
+            var totals = _dataController.AggregateClaimsByChain(_accountId);
 
             ETHTOT.Text = totals.ContainsKey("ETH") ? totals["ETH"].ToString() : "0";
             BSCTOT.Text = totals.ContainsKey("BSC") ? totals["BSC"].ToString() : "0";
@@ -206,38 +234,32 @@ namespace XenBot
 
         private void RefreshGrid()
         {
-            _accountsDG.Clear();
+            Claims.Clear();
 
-            List<Entities.Account> accounts = _dataController.GetAccountsByChain(cbBlockChain.Text);
+            List<Entities.Claim> accounts = _dataController.GetClaimsByChain(cbBlockChain.Text, _accountId);
             
             for(int x = 0; x < accounts.Count; x++)
             {
-                AccountDG accountDG = new AccountDG();
-                accountDG.AccountId = accounts[x].AccountId;
+                ClaimVM accountDG = new ClaimVM();
+                accountDG.AccountId = accounts[x].Id;
                 accountDG.ClaimExpire = accounts[x].ClaimExpire;
                 accountDG.StakeExpire = accounts[x].StakeExpire;
                 accountDG.Address = accounts[x].Address;
                 accountDG.DaysLeft = accounts[x].DaysLeft;
                 accountDG.Chain = accounts[x].Chain;
-                _accountsDG.Add(accountDG);
+                Claims.Add(accountDG);
             }
-        }
-
-        private void Setup()
-        {
-            _dataController.CreateDFile();
         }
 
         private void LoadWallet()
         {
-            string currentDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            string walletPath = System.IO.Path.Combine(currentDirectory, "wallet.data");
+            var account = _dataController.GetAccountWithPhrase(_accountId);
 
             string words = string.Empty;
 
             try
             {
-                string encryptedWords = File.ReadAllText(walletPath);
+                string encryptedWords = account.Phrase;
                 words = Rijndael.Decrypt(encryptedWords, _password, KeySize.Aes256);
             }
             catch (Exception ex)
@@ -273,7 +295,7 @@ namespace XenBot
                 CancelBtn.IsEnabled = true;
                 EnableApp(false);
 
-                int accountId = 0;
+                int claimId = 0;
 
                 int termDays = 0;
 
@@ -314,16 +336,15 @@ namespace XenBot
                         return;
                     }
 
-                    var accountfromDB = _dataController.GetAccountByIdAndChain(accountId, _blockchainController.ChainName);
-
+                    var accountfromDB = _dataController.GetClaimByIdAndChain(claimId, _blockchainController.ChainName, _accountId);
 
                     if (accountfromDB == null)
                     {
-                        Nethereum.Web3.Accounts.Account mintAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(accountId).PrivateKey);
+                        Nethereum.Web3.Accounts.Account mintAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(claimId).PrivateKey);
                         var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
 
                         //Does not have a rank
-                        if (HasClaimedRank(accountId, userMintResult) == false)
+                        if (HasClaimedRank(claimId, userMintResult) == false)
                         {
                             GasPrice gasPrice;
                             BigInteger claimRankTransactionFee = 0;
@@ -371,17 +392,17 @@ namespace XenBot
                             }
 
                             BigInteger amountToSend = mintAccountBalance >= claimRankTransactionFee ? new BigInteger(0) : claimRankTransactionFee - mintAccountBalance;
-                            var transaction = await _blockchainController.TransferCoins(_wallet.GetAccount(0), _wallet.GetAccount(accountId).Address, amountToSend, _priorityFee, transferGas, gasPrice);
+                            var transaction = await _blockchainController.TransferCoins(_wallet.GetAccount(0), _wallet.GetAccount(claimId).Address, amountToSend, _priorityFee, transferGas, gasPrice);
                             await _xenBlockchainController.WaitForConfirmations(transaction);
-                            await _xenBlockchainController.ClaimRank(_wallet.GetAccount(accountId), termDays, claimRankGas, gasPrice);
+                            await _xenBlockchainController.ClaimRank(_wallet.GetAccount(claimId), termDays, claimRankGas, gasPrice);
                             
                             walletsCreated++;
 
                             DateTime claimExpire = DateTime.UtcNow.AddDays(termDays);
-                            string address = _wallet.GetAccount(accountId).Address;
+                            string address = _wallet.GetAccount(claimId).Address;
                             var data = await _xenBlockchainController.GetUserMints(address);
                             var tokens = _xenBlockchainController.GetGrossReward(_globalRank, (long)data.Amplifier, (long)data.Term, (long)data.EaaRate, (long)data.Rank);
-                            _dataController.UpdateClaimInDB(accountId, claimExpire, address, chain, (long)data.Rank, (long)data.Amplifier, (long)data.EaaRate, (long)data.Term, tokens);
+                            _dataController.UpdateClaimInDB(claimId, _accountId, claimExpire, address, chain, (long)data.Rank, (long)data.Amplifier, (long)data.EaaRate, (long)data.Term, tokens);
                             await Task.Delay(2000);
                         }
                         else
@@ -390,7 +411,7 @@ namespace XenBot
                             var matureDate = UnixTimeStampToDateTime((long)userMintResult.MaturityTs);
                             var address = userMintResult.Address;
                             var tokens = _xenBlockchainController.GetGrossReward(_globalRank, (long)userMintResult.Amplifier, (long)userMintResult.Term, (long)userMintResult.EaaRate, (long)userMintResult.Rank);
-                            _dataController.UpdateClaimInDB(accountId, UnixTimeStampToDateTime((long)userMintResult.MaturityTs), address, chain, (long)userMintResult.Rank, (long)userMintResult.Amplifier, (long)userMintResult.EaaRate, (long)userMintResult.Term, tokens);
+                            _dataController.UpdateClaimInDB(claimId, _accountId, UnixTimeStampToDateTime((long)userMintResult.MaturityTs), address, chain, (long)userMintResult.Rank, (long)userMintResult.Amplifier, (long)userMintResult.EaaRate, (long)userMintResult.Term, tokens);
                         }
                         LoadTotals();
 
@@ -400,7 +421,7 @@ namespace XenBot
                         }
                     }
 
-                    accountId++;
+                    claimId++;
                 }
             }
             catch(Exception ex)
@@ -430,17 +451,17 @@ namespace XenBot
 
         private void _dataController_AccountDeleted(object? sender, AccountEventArg e)
         {
-            _accountsDG.Remove(_accountsDG.SingleOrDefault(i => i.AccountId == e.Account.AccountId));
+            Claims.Remove(Claims.SingleOrDefault(i => i.AccountId == e.Account.Id));
         }
 
-        private void UpdateAccountToGrid(Entities.Account account)
+        private void UpdateAccountToGrid(Entities.Claim account)
         {
-            AccountDG dgObj = _accountsDG.FirstOrDefault(x => x.AccountId == account.AccountId && x.Chain == account.Chain);
+            ClaimVM dgObj = Claims.FirstOrDefault(x => x.AccountId == account.Id && x.Chain == account.Chain);
 
             if(dgObj != null)
             {
                 dgObj.Address = account.Address;
-                dgObj.AccountId = account.AccountId;
+                dgObj.AccountId = account.Id;
                 dgObj.Chain = account.Chain;
                 dgObj.ClaimExpire = account.ClaimExpire;
                 dgObj.DaysLeft = account.DaysLeft;
@@ -451,15 +472,15 @@ namespace XenBot
             }
         }
 
-        private void AddAccountToGrid(Entities.Account account)
+        private void AddAccountToGrid(Entities.Claim account)
         {
-            AccountDG dgObj = new AccountDG();
+            ClaimVM dgObj = new ClaimVM();
             dgObj.Address = account.Address;
-            dgObj.AccountId = account.AccountId;
+            dgObj.AccountId = account.Id;
             dgObj.Chain = account.Chain;
             dgObj.ClaimExpire = account.ClaimExpire;
             dgObj.DaysLeft = account.DaysLeft;
-            _accountsDG.Add(dgObj);
+            Claims.Add(dgObj);
         }
 
         private void EnableApp(bool isEnabled)
@@ -552,7 +573,7 @@ namespace XenBot
         {
             try
             {
-                int accountId = 0;
+                int claimId = 0;
 
                 string chain = _blockchainController.ChainName;
 
@@ -562,15 +583,15 @@ namespace XenBot
 
                 while (true)
                 {
-                    var accountfromDB = _dataController.GetAccountByIdAndChain(accountId, chain);
+                    var accountfromDB = _dataController.GetClaimByIdAndChain(claimId, chain, _accountId);
 
                     if (accountfromDB == null)
                     {
-                        Nethereum.Web3.Accounts.Account mintAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(accountId).PrivateKey);
+                        Nethereum.Web3.Accounts.Account mintAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(claimId).PrivateKey);
                         var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
 
                         //Does not have a rank
-                        if (HasClaimedRank(accountId, userMintResult) == false)
+                        if (HasClaimedRank(claimId, userMintResult) == false)
                         {
                             notMintedCount++;
                         }
@@ -581,7 +602,7 @@ namespace XenBot
                             var matureDate = UnixTimeStampToDateTime((long)userMintResult.MaturityTs);
                             var address = userMintResult.Address;
                             var tokens = _xenBlockchainController.GetGrossReward(_globalRank, (long)userMintResult.Amplifier, (long)userMintResult.Term, (long)userMintResult.EaaRate, (long)userMintResult.Rank);
-                            _dataController.UpdateClaimInDB(accountId, matureDate, address, chain, (long)userMintResult.Rank, (long)userMintResult.Amplifier, (long)userMintResult.EaaRate, (long)userMintResult.Term, tokens);
+                            _dataController.UpdateClaimInDB(claimId, _accountId, matureDate, address, chain, (long)userMintResult.Rank, (long)userMintResult.Amplifier, (long)userMintResult.EaaRate, (long)userMintResult.Term, tokens);
                             LoadTotals();
                         }
                     }
@@ -592,22 +613,22 @@ namespace XenBot
                         if (accountfromDB.ClaimExpire != null && DateTime.UtcNow > accountfromDB.ClaimExpire) //is expired
                         {
                             //var xx = _wallet.GetAccount(accountId).PrivateKey;
-                            Nethereum.Web3.Accounts.Account mintAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(accountId).PrivateKey);
+                            Nethereum.Web3.Accounts.Account mintAccount = new Nethereum.Web3.Accounts.Account(_wallet.GetAccount(claimId).PrivateKey);
                             var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
 
                             if(userMintResult.Address != mintAccount.Address) // It's claimed. So remove in local database
                             {
-                                _dataController.DeleteClaimByIdAndChain(accountId, chain);
+                                _dataController.DeleteClaimByIdAndChain(claimId, chain, _accountId);
                             }
                         }
                     }
 
-                    if (notMintedCount >= 200)
+                    if (notMintedCount >= 5)
                     {
                         break;
                     }
 
-                    accountId++;
+                    claimId++;
                 }
 
                 RefreshGrid();
@@ -623,7 +644,7 @@ namespace XenBot
         {
             long tokens = 0;
 
-            var dict = _dataController.AggregateTokensByChain();
+            var dict = _dataController.AggregateTokensByChain(_accountId);
 
             if (dict.ContainsKey(cbBlockChain.Text))
             {
@@ -695,15 +716,15 @@ namespace XenBot
                             return;
                         }
 
-                        var expiredAccounts = _dataController.GetExpiredAccountsByChain(chain);
+                        var expiredAccounts = _dataController.GetExpiredClaimsByChain(chain, _accountId);
 
                         foreach (var expiredAccount in expiredAccounts)
                         {
-                            var mintAccount = _wallet.GetAccount(expiredAccount.AccountId);
+                            var mintAccount = _wallet.GetAccount(expiredAccount.Id);
 
                             var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
 
-                            if (HasClaimedRank(expiredAccount.AccountId, userMintResult))
+                            if (HasClaimedRank(expiredAccount.Id, userMintResult))
                             {
                                 GasPrice gasPrice;
                                 BigInteger mintRewardTransactionFee = 0;
@@ -757,11 +778,11 @@ namespace XenBot
                                 await _blockchainController.TransferCoins(_wallet.GetAccount(0), expiredAccount.Address, amountToSend, _priorityFee, transferGas, gasPrice);
                                 await _xenBlockchainController.MintRewardAndShare(mintAccount, mainAccount.Address, claimRewardGas, gasPrice);
 
-                                _dataController.DeleteClaimByIdAndChain(expiredAccount.AccountId, chain);
+                                _dataController.DeleteClaimByIdAndChain(expiredAccount.Id, chain, _accountId);
                             }
                             else
                             {
-                                _dataController.DeleteClaimByIdAndChain(expiredAccount.AccountId, chain);
+                                _dataController.DeleteClaimByIdAndChain(expiredAccount.Id, chain, _accountId);
                             }
 
                             LoadTotals();
@@ -807,12 +828,12 @@ namespace XenBot
             {
                 string chain = _blockchainController.ChainName;
 
-                var accounts = _dataController.GetAccountsByChain(chain);
+                var claims = _dataController.GetClaimsByChain(chain, _accountId);
 
-                foreach (var account in accounts)
+                foreach (var claim in claims)
                 {
-                    var grossReward = _xenBlockchainController.GetGrossReward(_globalRank, account.Amplifier, account.Term, account.EaaRate, account.Rank);
-                    _dataController.UpdateTokensByIdAndChain(account.AccountId, chain, grossReward);
+                    var grossReward = _xenBlockchainController.GetGrossReward(_globalRank, claim.Amplifier, claim.Term, claim.EaaRate, claim.Rank);
+                    _dataController.UpdateTokensByIdAndChain(claim.Id, _accountId, chain, grossReward);
                 }
 
                 RefreshGrid();
@@ -821,6 +842,52 @@ namespace XenBot
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message);
+            }
+        }
+
+        private async void btnAddAccount_Click(object sender, RoutedEventArgs e)
+        {
+            CreateAccountWindow createAccountWindow = new CreateAccountWindow(_password);
+            createAccountWindow.ShowDialog();
+
+            LoadAccounts();
+            var lastId = Accounts.Last().Id;
+
+            try
+            {
+                _accountId = lastId;
+                cbAccount.SelectedValue = lastId;
+                EnableApp(false);
+                LoadWallet();
+                LoadFactories();
+                RefreshGrid();
+                await LoadInfo();
+                LoadTokens();
+            }
+            finally
+            {
+                EnableApp(true);
+            }
+        }
+
+        private async void cbAccount_DropDownClosed(object sender, EventArgs e)
+        {
+            if (IsLoaded)
+            {
+                try
+                {
+                    _accountId = (int)cbAccount.SelectedValue;
+                    LoadWallet();
+                    EnableApp(false);
+                    LoadFactories();
+                    RefreshGrid();
+                    await LoadInfo();
+                    LoadTokens();
+                }
+                finally
+                {
+                    EnableApp(true);
+                }
             }
         }
     }

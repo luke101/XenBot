@@ -56,9 +56,9 @@ namespace XenBot
                 return;
             }
 
-            string walletPath = System.IO.Path.Combine(currentDirectory, "wallet.data");
+            string dataPath = System.IO.Path.Combine(currentDirectory, "data.db");
 
-            if (File.Exists(walletPath) == false)
+            if (File.Exists(dataPath) == false)
             {
                 CreateAccountWindow createAccountWindow = new CreateAccountWindow(password);
 

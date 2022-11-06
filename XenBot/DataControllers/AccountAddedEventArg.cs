@@ -8,9 +8,9 @@ namespace XenBot.DataControllers
 {
     public class AccountEventArg : EventArgs
     {
-        public Entities.Account Account { get; init; }
+        public Entities.Claim Account { get; init; }
 
-        public AccountEventArg(Entities.Account account)
+        public AccountEventArg(Entities.Claim account)
         {
             Account = account;
         }

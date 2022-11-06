@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace XenBot.DatagridEntities
 {
-    public class AccountDG : INotifyPropertyChanged
+    public class ClaimVM : INotifyPropertyChanged
     {
         private DateTime? _claimExpire;
 
