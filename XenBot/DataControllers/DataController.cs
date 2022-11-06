@@ -472,10 +472,10 @@ namespace XenBot.DataControllers
             {
                 conn.Open();
 
-                string statement = @"   INSERT INTO data (id, claim_expire, address, chain, rank, amplifier, eaa_rate, term, tokens)
-                                        VALUES(@id, @claim_expire, @address, @chain, @rank, @amplifier, @eaa_rate, @term, @tokens) 
+                string statement = @"   INSERT INTO data (id, claim_expire, address, chain, rank, amplifier, eaa_rate, term, tokens, account_id)
+                                        VALUES(@id, @claim_expire, @address, @chain, @rank, @amplifier, @eaa_rate, @term, @tokens, @account_id) 
                                         ON CONFLICT(id, chain, account_id) 
-                                        DO UPDATE SET claim_expire = @claim_expire, address = @address, chain = @chain, rank = @rank, amplifier = @amplifier, eaa_rate = @eaa_rate, term = @term, tokens = @tokens;
+                                        DO UPDATE SET claim_expire = @claim_expire, address = @address, chain = @chain, rank = @rank, amplifier = @amplifier, eaa_rate = @eaa_rate, term = @term, tokens = @tokens, account_id = @account_id;
                                         SELECT last_insert_rowid();";
 
                 using (SqliteCommand command = new SqliteCommand(statement, conn))
