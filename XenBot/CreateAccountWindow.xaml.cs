@@ -86,7 +86,7 @@ namespace XenBot
 
             try
             {
-                string seed = Seed.Password.ToString();
+                string seed = Seed.Text;
                 _wallet = new Wallet(seed, null);
                 var encryptedWords = Rijndael.Encrypt(seed, _password, KeySize.Aes256);
 
@@ -94,6 +94,13 @@ namespace XenBot
                 account.Name = accountNameWindow.Name;
                 account.Address = _wallet.GetAccount(0).Address;
                 account.Phrase = encryptedWords;
+
+                var accounts = _dataController.GetAllAccounts();
+                if(accounts.Any(x => x.Address == _wallet.GetAccount(0).Address))
+                {
+                    throw new Exception("This account already added: " + accounts.First(x => x.Address == _wallet.GetAccount(0).Address).Name);
+                }
+
                 _dataController.AddAccount(account);
             }
             catch (Exception ex)

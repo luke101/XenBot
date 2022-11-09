@@ -64,6 +64,7 @@ namespace XenBot
         private bool cancelPressed = false;
         private long _globalRank = 1;
         private int _accountId = 0;
+        private string _blockChain = string.Empty;
         private List<Entities.Claim> _accounts = new List<Entities.Claim>();
         
         private BlockchainControllerFactory _blockchainControllerFactory;
@@ -101,6 +102,7 @@ namespace XenBot
             AccountsGrid.ItemsSource = Claims;
             cbAccount.ItemsSource = Accounts;
             CancelBtn.IsEnabled = false;
+            _blockChain = cbBlockChain.Text;
 
             try
             {
@@ -153,6 +155,7 @@ namespace XenBot
             DCTOT.Text = totals.ContainsKey("Dogechain") ? totals["Dogechain"].ToString() : "0";
             AVAXTOT.Text = totals.ContainsKey("Avalanche") ? totals["Avalanche"].ToString() : "0";
             GLMRTOT.Text = totals.ContainsKey("Moonbeam") ? totals["Moonbeam"].ToString() : "0";
+            EVMOSTOT.Text = totals.ContainsKey("Evmos") ? totals["Evmos"].ToString() : "0";
         }
 
         private async Task LoadInfo()
@@ -214,6 +217,12 @@ namespace XenBot
                 _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenMoonbeamBlockchainController();
                 _webController = _webControllerFactory.CreateMoonbeamWebController();
             }
+            else if (cbBlockChain.SelectedIndex == 8)
+            {
+                _blockchainController = _blockchainControllerFactory.CreateEvmosBlockchainController();
+                _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenEvmosBlockchainController();
+                _webController = _webControllerFactory.CreateEvmosWebController();
+            }
         }
 
         private async Task LoadCurrentMaxTerm()
@@ -261,7 +270,7 @@ namespace XenBot
             {
                 string encryptedWords = account.Phrase;
                 words = Rijndael.Decrypt(encryptedWords, _password, KeySize.Aes256);
-            }
+             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message);
@@ -497,6 +506,9 @@ namespace XenBot
             UpdatePriceButton.IsEnabled = isEnabled;
             btnRefreshData.IsEnabled = isEnabled;
             btnClaimRewards.IsEnabled = isEnabled;
+            cbAccount.IsEnabled = isEnabled;
+            btnAddAccount.IsEnabled = isEnabled;
+            btnDeleteAccount.IsEnabled = isEnabled;
         }
 
         private bool HasClaimedRank(int accountId, UserMintOutputDTO userMintResult)
@@ -552,10 +564,11 @@ namespace XenBot
 
         private async void cbBlockChain_DropDownClosed(object sender, EventArgs e)
         {
-            if (IsLoaded)
+            if (IsLoaded && _blockChain != cbBlockChain.Text)
             {
                 try
                 {
+                    _blockChain = cbBlockChain.Text;
                     EnableApp(false);
                     LoadFactories();
                     RefreshGrid();
@@ -573,6 +586,9 @@ namespace XenBot
         {
             try
             {
+                CancelBtn.IsEnabled = true;
+                EnableApp(false);
+
                 int claimId = 0;
 
                 string chain = _blockchainController.ChainName;
@@ -623,12 +639,17 @@ namespace XenBot
                         }
                     }
 
-                    if (notMintedCount >= 5)
+                    if (notMintedCount >= 50)
                     {
                         break;
                     }
 
                     claimId++;
+
+                    if (cancelPressed == true)
+                    {
+                        return;
+                    }
                 }
 
                 RefreshGrid();
@@ -637,6 +658,12 @@ namespace XenBot
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                cancelPressed = false;
+                CancelBtn.IsEnabled = false;
+                EnableApp(true);
             }
         }
 
@@ -863,6 +890,7 @@ namespace XenBot
                 RefreshGrid();
                 await LoadInfo();
                 LoadTokens();
+                LoadTotals();
             }
             finally
             {
@@ -872,7 +900,7 @@ namespace XenBot
 
         private async void cbAccount_DropDownClosed(object sender, EventArgs e)
         {
-            if (IsLoaded)
+            if (IsLoaded && _accountId != (int)cbAccount.SelectedValue)
             {
                 try
                 {
@@ -883,6 +911,7 @@ namespace XenBot
                     RefreshGrid();
                     await LoadInfo();
                     LoadTokens();
+                    LoadTotals();
                 }
                 finally
                 {

@@ -48,5 +48,10 @@ namespace XenBot.Factories
         {
             return new MoonbeamWebController();
         }
+
+        public IWebController CreateEvmosWebController()
+        {
+            return new EvmosWebController();
+        }
     }
 }

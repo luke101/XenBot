@@ -51,5 +51,10 @@ namespace XenBot.Factories
         {
             return new MoonbeamBlockchainController("https://rpc.ankr.com/moonbeam");
         }
+
+        public IBlockchainController CreateEvmosBlockchainController()
+        {
+            return new EvmosBlockchainController("https://eth.bd.evmos.org:8545");
+        }
     }
 }
