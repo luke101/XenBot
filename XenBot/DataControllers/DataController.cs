@@ -53,7 +53,7 @@ namespace XenBot.DataControllers
             {
                 conn.Open();
 
-                string statement = "select id, name, address from accounts order by id";
+                string statement = "select id, name, address from accounts order by name";
 
                 using (SqliteCommand command = new SqliteCommand(statement, conn))
                 {
@@ -69,6 +69,41 @@ namespace XenBot.DataControllers
                             account.Id = reader.GetInt32(idOrdinal);
                             account.Name = reader.GetString(nameOrdinal);
                             account.Address = reader.GetString(addressOrdinal);
+                            accounts.Add(account);
+                        }
+                    }
+                }
+            }
+
+            return accounts;
+        }
+
+        public List<Entities.Account> GetAllAccountsWithPhrase()
+        {
+            List<Entities.Account> accounts = new List<Entities.Account>();
+
+            using (SqliteConnection conn = new SqliteConnection(string.Format("Data Source={0};", _dbFileName)))
+            {
+                conn.Open();
+
+                string statement = "select id, name, address, phrase from accounts order by id";
+
+                using (SqliteCommand command = new SqliteCommand(statement, conn))
+                {
+                    using (SqliteDataReader reader = command.ExecuteReader())
+                    {
+                        int idOrdinal = reader.GetOrdinal("id");
+                        int nameOrdinal = reader.GetOrdinal("name");
+                        int addressOrdinal = reader.GetOrdinal("address");
+                        int phraseOrdinal = reader.GetOrdinal("phrase");
+
+                        while (reader.Read())
+                        {
+                            Entities.Account account = new Entities.Account();
+                            account.Id = reader.GetInt32(idOrdinal);
+                            account.Name = reader.GetString(nameOrdinal);
+                            account.Address = reader.GetString(addressOrdinal);
+                            account.Phrase = reader.GetString(phraseOrdinal);
                             accounts.Add(account);
                         }
                     }
@@ -131,6 +166,36 @@ namespace XenBot.DataControllers
                     command.Parameters.AddWithValue("@name", account.Name);
                     command.Parameters.AddWithValue("@phrase", account.Phrase);
                     command.Parameters.AddWithValue("@address", account.Address);
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public void ChangePassword(List<Entities.Account> accounts)
+        {
+            using(TransactionScope scope = new TransactionScope())
+            {
+                foreach(var account in accounts)
+                {
+                    UpdateAccountPhrase(account.Id, account.Phrase);
+                }
+
+                scope.Complete();
+            }
+        }
+
+        private void UpdateAccountPhrase(int id, string phrase)
+        {
+            using (SqliteConnection conn = new SqliteConnection(string.Format("Data Source={0};", _dbFileName)))
+            {
+                conn.Open();
+
+                string statement = @"UPDATE accounts SET phrase = @phrase WHERE id = @id;";
+
+                using (SqliteCommand command = new SqliteCommand(statement, conn))
+                {
+                    command.Parameters.AddWithValue("@id", id);
+                    command.Parameters.AddWithValue("@phrase", phrase);
                     command.ExecuteNonQuery();
                 }
             }

@@ -48,6 +48,7 @@ using XenBot.WebControllers;
 using System.Windows.Markup;
 using System.Globalization;
 using Microsoft.VisualBasic;
+using Nethereum.Contracts.Standards.ERC20.TokenList;
 
 namespace XenBot
 {
@@ -256,6 +257,7 @@ namespace XenBot
                 accountDG.Address = accounts[x].Address;
                 accountDG.DaysLeft = accounts[x].DaysLeft;
                 accountDG.Chain = accounts[x].Chain;
+                accountDG.EstimatedTokens = string.Format(CultureInfo.InvariantCulture, "{0:n0}", accounts[x].Tokens); 
                 Claims.Add(accountDG);
             }
         }
@@ -331,6 +333,12 @@ namespace XenBot
                 else if (termDays <= 0)
                 {
                     MessageBox.Show("Invalid max gas cost");
+                    return;
+                }
+
+                if (_wallets <= 0)
+                {
+                    MessageBox.Show("Invalid number of wallets");
                     return;
                 }
 
@@ -474,6 +482,7 @@ namespace XenBot
                 dgObj.Chain = account.Chain;
                 dgObj.ClaimExpire = account.ClaimExpire;
                 dgObj.DaysLeft = account.DaysLeft;
+                dgObj.EstimatedTokens = string.Format(CultureInfo.InvariantCulture, "{0:n0}", account.Tokens);
             }
             else
             {
@@ -489,6 +498,7 @@ namespace XenBot
             dgObj.Chain = account.Chain;
             dgObj.ClaimExpire = account.ClaimExpire;
             dgObj.DaysLeft = account.DaysLeft;
+            dgObj.EstimatedTokens = string.Format(CultureInfo.InvariantCulture, "{0:n0}", account.Tokens);
             Claims.Add(dgObj);
         }
 
@@ -685,12 +695,11 @@ namespace XenBot
 
         private void tbWallets_TextChanged(object sender, TextChangedEventArgs e)
         {
+            _wallets = 0;
             int dummy = 0;
             if(int.TryParse(tbWallets.Text, out dummy) == false)
             {
-                _wallets = 1;
-                MessageBox.Show("Invalid number of wallets");
-                tbWallets.Text = "1";
+                _wallets = 0;
             }
             else
             {
@@ -916,6 +925,37 @@ namespace XenBot
                 finally
                 {
                     EnableApp(true);
+                }
+            }
+        }
+
+        private void ChangePassowrdClick(object sender, RoutedEventArgs e)
+        {
+            ChangePasswordWindow changePasswordWindow = new ChangePasswordWindow();
+
+            if(changePasswordWindow.ShowDialog() == true)
+            {
+                try
+                {
+                    var accounts = _dataController.GetAllAccountsWithPhrase();
+
+                    for (int i = 0; i < accounts.Count; i++)
+                    {
+                        string oldKey = Rijndael.Decrypt(accounts[i].Phrase, _password, KeySize.Aes256);
+                        string newEncryptedKey = Rijndael.Encrypt(oldKey, changePasswordWindow.NewPassword, KeySize.Aes256);
+                        accounts[i].Phrase = newEncryptedKey;
+                    }
+
+                    _dataController.ChangePassword(accounts);
+
+                    _password = changePasswordWindow.NewPassword;
+
+                    LoadWallet();
+                }
+                catch(Exception ex)
+                {
+                    MessageBox.Show("Something went wrong");
+                    return;
                 }
             }
         }

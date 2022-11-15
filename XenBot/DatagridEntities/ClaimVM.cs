@@ -64,6 +64,23 @@ namespace XenBot.DatagridEntities
             }
         }
 
+        private string _estimatedTokens;
+        public string EstimatedTokens
+        {
+            set
+            {
+                if (!value.Equals(_estimatedTokens))
+                {
+                    _estimatedTokens = value;
+                    NotifyPropertyChanged(nameof(EstimatedTokens));
+                }
+            }
+            get
+            {
+                return _estimatedTokens;
+            }
+        }
+
         public string Address { get; set; }
         public string Chain { get; set; }
 
