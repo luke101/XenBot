@@ -53,5 +53,10 @@ namespace XenBot.Factories
         {
             return new EvmosWebController();
         }
+
+        public IWebController CreateOKXChainWebController()
+        {
+            return new OKXChainWebController();
+        }
     }
 }

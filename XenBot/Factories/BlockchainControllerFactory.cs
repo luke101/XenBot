@@ -56,5 +56,10 @@ namespace XenBot.Factories
         {
             return new EvmosBlockchainController("https://eth.bd.evmos.org:8545");
         }
+
+        public IBlockchainController CreateOKXChainBlockchainController()
+        {
+            return new OKXChainBlockchainController("https://exchainrpc.okex.org");
+        }
     }
 }

@@ -157,6 +157,7 @@ namespace XenBot
             AVAXTOT.Text = totals.ContainsKey("Avalanche") ? totals["Avalanche"].ToString() : "0";
             GLMRTOT.Text = totals.ContainsKey("Moonbeam") ? totals["Moonbeam"].ToString() : "0";
             EVMOSTOT.Text = totals.ContainsKey("Evmos") ? totals["Evmos"].ToString() : "0";
+            OKXCHAINTOT.Text = totals.ContainsKey("OKXChain") ? totals["OKXChain"].ToString() : "0";
         }
 
         private async Task LoadInfo()
@@ -223,6 +224,12 @@ namespace XenBot
                 _blockchainController = _blockchainControllerFactory.CreateEvmosBlockchainController();
                 _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenEvmosBlockchainController();
                 _webController = _webControllerFactory.CreateEvmosWebController();
+            }
+            else if (cbBlockChain.SelectedIndex == 9)
+            {
+                _blockchainController = _blockchainControllerFactory.CreateOKXChainBlockchainController();
+                _xenBlockchainController = _xenBlockchainControllerFactory.CreateXenOKXChainBlockchainController();
+                _webController = _webControllerFactory.CreateOKXChainWebController();
             }
         }
 
@@ -417,8 +424,20 @@ namespace XenBot
 
                             DateTime claimExpire = DateTime.UtcNow.AddDays(termDays);
                             string address = _wallet.GetAccount(claimId).Address;
-                            var data = await _xenBlockchainController.GetUserMints(address);
-                            var tokens = _xenBlockchainController.GetGrossReward(_globalRank, (long)data.Amplifier, (long)data.Term, (long)data.EaaRate, (long)data.Rank);
+                            UserMintOutputDTO data;
+                            long tokens = 0;
+
+                            while (true)
+                            {
+                                data = await _xenBlockchainController.GetUserMints(address);
+                                tokens = _xenBlockchainController.GetGrossReward((long)data.Rank + 10, (long)data.Amplifier, (long)data.Term, (long)data.EaaRate, (long)data.Rank);
+                                if(tokens > 0)
+                                {
+                                    break;
+                                }
+                                await Task.Delay(2000);
+                            }
+                            
                             _dataController.UpdateClaimInDB(claimId, _accountId, claimExpire, address, chain, (long)data.Rank, (long)data.Amplifier, (long)data.EaaRate, (long)data.Term, tokens);
                             await Task.Delay(2000);
                         }

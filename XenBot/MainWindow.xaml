@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:XenBot"
+        xmlns:local="clr-namespace:XenBot" xmlns:datagridentities="clr-namespace:XenBot.DatagridEntities" d:DataContext="{d:DesignInstance Type=datagridentities:ClaimVM}"
         mc:Ignorable="d"
         Title="MainWindow" Height="600" Width="1100">
     <DockPanel>
@@ -63,6 +63,7 @@
                             <ComboBoxItem Content="Avalanche" />
                             <ComboBoxItem Content="Moonbeam" />
                             <ComboBoxItem Content="Evmos" />
+                            <ComboBoxItem Content="OKXChain" />
                         </ComboBox>
                         <Button x:Name="btnRefreshData" Grid.Column="1" Margin="0 0 0 5" Content="Refresh Data" FontSize="25" VerticalAlignment="Center" Click="btnRefreshData_Click"></Button>
                     </Grid>
@@ -192,6 +193,14 @@
                             <TextBlock VerticalAlignment="Center" Text="Evmos:" FontFamily="Arial Black" Foreground="#e1ad01" FontSize="20" Margin="0 0 3 0" Grid.Column="0" />
                             <TextBlock x:Name="EVMOSTOT" VerticalAlignment="Center" FontFamily="Arial Black" FontSize="20"  Grid.Column="1" />
                         </Grid>
+                        <Grid Margin="0 0 8 0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="auto" />
+                                <ColumnDefinition Width="auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Text="OKXChain:" FontFamily="Arial Black" Foreground="DarkRed" FontSize="20" Margin="0 0 3 0" Grid.Column="0" />
+                            <TextBlock x:Name="OKXCHAINTOT" VerticalAlignment="Center" FontFamily="Arial Black" FontSize="20"  Grid.Column="1" />
+                        </Grid>
                     </WrapPanel>
 
                     <TextBlock Text="Estimated Tokens:" VerticalAlignment="Center" HorizontalAlignment="Right" FontFamily="Arial Black" Foreground="Gray" FontSize="25" Margin="0 0 5 5" Grid.Row="7" Grid.Column="0" />
@@ -222,7 +231,8 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="ID" Width="Auto" Binding="{Binding AccountId}" IsReadOnly="True" />
                             <DataGridTextColumn CanUserSort="True" Header="Days Left" Width="Auto" Binding="{Binding DaysLeft}" IsReadOnly="True" />
-                            <DataGridTextColumn CanUserSort="True" Header="Claim Expire" Width="Auto" SortMemberPath="{Binding ClaimExpire}" Binding="{Binding ClaimExpire}" IsReadOnly="True" />
+                            <DataGridTextColumn CanUserSort="True" Header="Due" SortMemberPath="ClaimExpire" Width="Auto" Binding="{Binding ExpireTime}" IsReadOnly="True" />
+                            <DataGridTextColumn CanUserSort="True" Header="Claim Expire" Width="Auto" SortMemberPath="ClaimExpire" Binding="{Binding ClaimExpire}" IsReadOnly="True" />
                             <DataGridTextColumn Header="Chain" Width="Auto" Binding="{Binding Chain}" IsReadOnly="True" />
                             <DataGridTextColumn Header="Estimated Tokens" Width="Auto" Binding="{Binding EstimatedTokens}" IsReadOnly="True" />
                             <DataGridTextColumn Header="Address" Width="Auto" Binding="{Binding Address}" IsReadOnly="True" />
