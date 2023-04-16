@@ -826,7 +826,6 @@ namespace XenBot
                                     break;
                                 }
 
-
                                 BigInteger amountToSend = mintAccountBalance >= mintRewardTransactionFee ? new BigInteger(0) : mintRewardTransactionFee - mintAccountBalance;
 
                                 //await SendMoneyToMintAccount(expiredAccount.AccountId, _wallet, amountToSend, gasPrice, transferGas);
