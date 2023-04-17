@@ -14,6 +14,7 @@ using System.Xml.Linq;
 using System.Xml;
 using XenBot.Entities;
 using static System.Net.Mime.MediaTypeNames;
+using NBitcoin;
 
 namespace XenBot.DataControllers
 {
@@ -44,6 +45,7 @@ namespace XenBot.DataControllers
         {
             _dbFileName = "data.db";
         }
+
 
         public List<Entities.Account> GetAllAccounts()
         {
@@ -238,6 +240,54 @@ namespace XenBot.DataControllers
                     command.ExecuteNonQuery();
                 }
             }
+        }
+
+        public List<Claim> GetClaimsDueInDays(int days)
+        {
+            DateTime futureDateWorking = DateTime.Now.AddDays(days);
+            DateTime futureDate = new DateTime(futureDateWorking.Year, futureDateWorking.Month, futureDateWorking.Day, 23, 59, 59);
+
+            TimeZoneInfo localTimeZone = TimeZoneInfo.Local; 
+            DateTime futureDateUtc = TimeZoneInfo.ConvertTimeToUtc(futureDate, localTimeZone);
+
+            List<Claim> claims = new List<Claim>();
+
+            using (SqliteConnection conn = new SqliteConnection(string.Format("Data Source={0};", _dbFileName)))
+            {
+                conn.Open();
+
+                string statement = " SELECT data.id, a.name as account_name, claim_expire, chain, tokens " +
+                                   " FROM data " +
+                                   " INNER JOIN accounts a on data.account_id = a.id" +
+                                   " where claim_expire <= @datetime";
+                
+                using (SqliteCommand command = new SqliteCommand(statement, conn))
+                {
+                    command.Parameters.AddWithValue("@datetime", futureDateUtc);
+
+                    using (SqliteDataReader reader = command.ExecuteReader())
+                    {
+                        int idOrdinal = reader.GetOrdinal("id");
+                        int accountNameOrdinal = reader.GetOrdinal("account_name");
+                        int claimExpireOrdinal = reader.GetOrdinal("claim_expire");
+                        int chainOrdinal = reader.GetOrdinal("chain");
+                        int tokensOrdinal = reader.GetOrdinal("tokens");
+
+                        while (reader.Read())
+                        {
+                            Claim claim = new Claim();
+                            claim.Id = reader.GetInt32(idOrdinal);
+                            claim.AccountName = reader.GetString(accountNameOrdinal);
+                            claim.ClaimExpire = reader.GetDateTime(claimExpireOrdinal).ToLocalTime();
+                            claim.Chain = reader.GetString(chainOrdinal);
+                            claim.Tokens = reader.GetInt64(tokensOrdinal);
+                            claims.Add(claim);
+                        }
+                    }
+                }
+            }
+
+            return claims;
         }
 
         public List<Entities.Claim> GetExpiredClaimsByChain(string chain, int accountId)

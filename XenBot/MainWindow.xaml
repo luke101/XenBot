@@ -65,7 +65,7 @@
                             <ComboBoxItem Content="Evmos" />
                             <ComboBoxItem Content="OKXChain" />
                         </ComboBox>
-                        <Button x:Name="btnRefreshData" Grid.Column="1" Margin="0 0 0 5" Content="Refresh Data" FontSize="25" VerticalAlignment="Center" Click="btnRefreshData_Click"></Button>
+                        <Button x:Name="btnRefreshData" Grid.Column="1" Margin="0,0,0,6" Content="Refresh Data" FontSize="25" VerticalAlignment="Bottom" Click="btnRefreshData_Click"></Button>
                     </Grid>
 
 
@@ -227,20 +227,36 @@
                         <!--<Button x:Name="BackUpBtn" Content="Back Up Data" Grid.Column="2" Click="BackUpBtn_Click" />-->
                     </Grid>
                     <Button x:Name="btnClaimRewards" Content="Claim Rewards" Grid.Column="0" Grid.Row="9" FontSize="25" Grid.ColumnSpan="3" Margin="0 0 0 5" Click="btnClaimRewards_Click"  />
-                    <DataGrid x:Name="AccountsGrid" Grid.Column="0" Grid.Row="10" CanUserSortColumns="True" AutoGenerateColumns="False" IsReadOnly="True" Grid.ColumnSpan="2">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="ID" Width="Auto" Binding="{Binding AccountId}" IsReadOnly="True" />
-                            <DataGridTextColumn CanUserSort="True" Header="Days Left" Width="Auto" Binding="{Binding DaysLeft}" IsReadOnly="True" />
-                            <DataGridTextColumn CanUserSort="True" Header="Due" SortMemberPath="ClaimExpire" Width="Auto" Binding="{Binding ExpireTime}" IsReadOnly="True" />
-                            <DataGridTextColumn CanUserSort="True" Header="Claim Expire" Width="Auto" SortMemberPath="ClaimExpire" Binding="{Binding ClaimExpire}" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Chain" Width="Auto" Binding="{Binding Chain}" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Estimated Tokens" Width="Auto" Binding="{Binding EstimatedTokens}" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Address" Width="Auto" Binding="{Binding Address}" IsReadOnly="True" />
-                        </DataGrid.Columns>
-                    </DataGrid>
+
+                    <TabControl Grid.Column="0" Grid.Row="10" Grid.ColumnSpan="2">
+                        <TabItem Header="Claims">
+                            <DataGrid x:Name="AccountsGrid" CanUserSortColumns="True" AutoGenerateColumns="False" IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="ID" Width="Auto" Binding="{Binding AccountId}" IsReadOnly="True" />
+                                    <DataGridTextColumn CanUserSort="True" Header="Days Left" Width="Auto" Binding="{Binding DaysLeft}" IsReadOnly="True" />
+                                    <DataGridTextColumn CanUserSort="True" Header="Due" SortMemberPath="ClaimExpire" Width="Auto" Binding="{Binding ExpireTime}" IsReadOnly="True" />
+                                    <DataGridTextColumn CanUserSort="True" Header="Claim Expire" Width="Auto" SortMemberPath="ClaimExpire" Binding="{Binding ClaimExpire}" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Chain" Width="Auto" Binding="{Binding Chain}" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Estimated Tokens" Width="Auto" Binding="{Binding EstimatedTokens}" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Address" Width="Auto" Binding="{Binding Address}" IsReadOnly="True" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                        <TabItem Header="Claims Due" x:Name="ClaimsDueTabItem">
+                            <DataGrid x:Name="ClaimsDueGrid" AutoGenerateColumns="False" IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Due" Width="Auto" Binding="{Binding Due}" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Account" Width="Auto" Binding="{Binding Account}" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Chain" Width="Auto" Binding="{Binding Chain}" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Count" Width="Auto" Binding="{Binding Count}" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Expected Tokens" Width="Auto" Binding="{Binding Tokens}" IsReadOnly="True" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                    </TabControl>
                 </Grid>
             </Border>
         </Grid>
     </DockPanel>
-    
+
 </Window>

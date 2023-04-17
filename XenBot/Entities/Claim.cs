@@ -9,6 +9,8 @@ namespace XenBot.Entities
     public class Claim
     {
         public int Id { get; set; }
+        public int AccountId { get; set; }
+        public string AccountName { get; set; }
         public DateTime? ClaimExpire { get; set; }
         public DateTime? StakeExpire { get; set; }
         public string Address { get; set; }

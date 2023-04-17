@@ -77,6 +77,7 @@ namespace XenBot
         private DataController _dataController;
 
         public ObservableCollection<ClaimVM> Claims = new ObservableCollection<ClaimVM>();
+        public ObservableCollection<ClaimDueVM> ClaimsDue = new ObservableCollection<ClaimDueVM>();
         public ObservableCollection<AccountVM> Accounts { get; set; }
 
         public AccountVM SelectedAccount { get; set; }
@@ -101,12 +102,14 @@ namespace XenBot
             _dataController.AccountUpdated += _dataController_AccountUpdated;
             _dataController.AccountDeleted += _dataController_AccountDeleted;
             AccountsGrid.ItemsSource = Claims;
+            ClaimsDueGrid.ItemsSource = ClaimsDue;
             cbAccount.ItemsSource = Accounts;
             CancelBtn.IsEnabled = false;
             _blockChain = cbBlockChain.Text;
 
             try
             {
+                LoadClaimsDue();
                 LoadAccounts();
                 EnableApp(false);
                 LoadWallet();
@@ -114,11 +117,152 @@ namespace XenBot
                 RefreshGrid();
                 LoadTotals();
                 LoadTokens();
+                
             }
             finally
             {
                 EnableApp(true);
             }
+        }
+
+        private void LoadClaimsDue()
+        {
+            var claimsDue = _dataController.GetClaimsDueInDays(7);
+
+            Dictionary<string, ClaimDue> claimDict = new Dictionary<string, ClaimDue>();
+
+            foreach (var claim in claimsDue)
+            {
+                string dueBracket = CalculateDueBracket(claim.ClaimExpire.Value);
+                string key = dueBracket + "_" + claim.AccountName + "_" + claim.Chain;
+
+                if (claimDict.ContainsKey(key) == false)
+                {
+                    var workingClaimDue = new ClaimDue();
+                    workingClaimDue.Chain = claim.Chain;
+                    workingClaimDue.DueName = dueBracket;
+                    workingClaimDue.Account = claim.AccountName;
+                    workingClaimDue.Count = 0;
+                    workingClaimDue.Tokens = 0;
+                    claimDict[key] = workingClaimDue;
+                }
+
+                var claimDue = claimDict[key];
+                claimDue.Count++;
+                claimDue.Tokens = claimDue.Tokens + claim.Tokens;
+            }
+
+            ClaimsDue.Clear();
+
+            int claimsDueNow = 0;
+
+            foreach (var key in claimDict.Keys)
+            {
+                ClaimDueVM claimDue = new ClaimDueVM
+                {
+                    ExpectedTokens = claimDict[key].Tokens,
+                    Due = claimDict[key].DueName,
+                    Chain = claimDict[key].Chain,
+                    Account = claimDict[key].Account,
+                    Count = claimDict[key].Count
+                };
+
+                ClaimsDue.Add(claimDue);
+
+                if(claimDue.Due == "Now")
+                {
+                    claimsDueNow = claimsDueNow + claimDue.Count;
+                }
+            }
+
+            ClaimsDueTabItem.Header = "Claims Due";
+
+            if(claimsDueNow > 0)
+            {
+                ClaimsDueTabItem.Header = "Claims Due (" + claimsDueNow + ")";
+            }
+        }
+
+        private string CalculateDueBracket(DateTime datetime)
+        {
+            DateTime now = DateTime.Now;
+
+            TimeZoneInfo localTimeZone = TimeZoneInfo.Local;
+            now = TimeZoneInfo.ConvertTimeToUtc(now, localTimeZone);
+            datetime = TimeZoneInfo.ConvertTimeToUtc(datetime, localTimeZone);
+
+            int days = (datetime - now).Days;
+
+            if(days > 7)
+            {
+                throw new Exception("Could not calculate due date");
+            }
+
+            DateTime day7 = now.AddDays(7);
+            DateTime day6 = now.AddDays(6);
+            DateTime day5 = now.AddDays(5);
+            DateTime day4 = now.AddDays(4);
+            DateTime day3 = now.AddDays(3);
+            DateTime day2 = now.AddDays(2);
+            DateTime tomorrow = now.AddDays(1);
+
+            Tuple<DateTime, DateTime> day7Block = CalculateDayBlock(day7);
+            Tuple<DateTime, DateTime> day6Block = CalculateDayBlock(day6);
+            Tuple<DateTime, DateTime> day5Block = CalculateDayBlock(day5);
+            Tuple<DateTime, DateTime> day4Block = CalculateDayBlock(day4);
+            Tuple<DateTime, DateTime> day3Block = CalculateDayBlock(day3);
+            Tuple<DateTime, DateTime> day2Block = CalculateDayBlock(day2);
+            Tuple<DateTime, DateTime> tomorrowBlock = CalculateDayBlock(tomorrow);
+
+            if (datetime >= day7Block.Item1 && datetime <= day7Block.Item2)
+            {
+                return "In 7 Days";
+            }
+            else if(datetime >= day6Block.Item1 && datetime <= day6Block.Item2)
+            {
+                return "In 6 Days";
+            }
+            else if (datetime >= day5Block.Item1 && datetime <= day5Block.Item2)
+            {
+                return "In 5 Days";
+            }
+            else if (datetime >= day4Block.Item1 && datetime <= day4Block.Item2)
+            {
+                return "In 4 Days";
+            }
+            else if (datetime >= day3Block.Item1 && datetime <= day3Block.Item2)
+            {
+                return "In 3 Days";
+            }
+            else if (datetime >= day2Block.Item1 && datetime <= day2Block.Item2)
+            {
+                return "In 2 Days";
+            }
+            else if (datetime >= tomorrowBlock.Item1 && datetime <= tomorrowBlock.Item2)
+            {
+                return "Tomorrow";
+            }
+            else
+            {
+                if(now >= datetime)
+                {
+                    return "Now";
+                }
+                else
+                {
+                    return "Today";
+                }
+            }
+        }
+
+        private Tuple<DateTime, DateTime> CalculateDayBlock(DateTime datetime)
+        {
+            DateTime low = new DateTime(datetime.Year, datetime.Month, datetime.Day, 0, 0, 0);
+            DateTime high = new DateTime(datetime.Year, datetime.Month, datetime.Day, 23, 59, 59);
+
+            Tuple<DateTime, DateTime> tuple = new Tuple<DateTime, DateTime>(low, high);
+
+            return tuple;
         }
 
         private void LoadAccounts()
@@ -470,6 +614,7 @@ namespace XenBot
                 CancelBtn.IsEnabled = false;
                 EnableApp(true);
                 LoadTokens();
+                LoadClaimsDue();
             }
         }
 
@@ -730,6 +875,7 @@ namespace XenBot
         {
             try
             {
+                LoadClaimsDue();
                 EnableApp(false);
                 await LoadInfo();
                 LoadTokens();
@@ -873,6 +1019,7 @@ namespace XenBot
                 CancelBtn.IsEnabled = false;
                 EnableApp(true);
                 LoadTokens();
+                LoadClaimsDue();
             }
         }
 
