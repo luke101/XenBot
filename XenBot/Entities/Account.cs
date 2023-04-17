@@ -6,15 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 namespace XenBot.Entities
 {
-
-    //int idOrdinal = reader.GetOrdinal("id");
-    //int accountIdOrdinal = reader.GetOrdinal("account_id");
-    //int claimExpireOrdinal = reader.GetOrdinal("claim_expire");
-    //int tokensOrdinal = reader.GetOrdinal("tokens");
-    //int chainOrdinal = reader.GetOrdinal("chain");
-    //int nameOrdinal = reader.GetOrdinal("name");
-    //int addressOrdinal = reader.GetOrdinal("address");
-
     public class Account
     {
         public int Id { get; set; }
