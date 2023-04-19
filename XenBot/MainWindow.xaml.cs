@@ -52,6 +52,7 @@ using Nethereum.Contracts.Standards.ERC20.TokenList;
 using XenBot.Enums;
 using XenBot.Utils;
 using System.Net.NetworkInformation;
+using System.Security.Claims;
 
 namespace XenBot
 {
@@ -500,9 +501,9 @@ namespace XenBot
 
                 int walletsCreated = 0;
 
-                while(true)
+                while (true)
                 {
-                    if(cancelPressed == true)
+                    if (cancelPressed == true)
                     {
                         return;
                     }
@@ -515,21 +516,21 @@ namespace XenBot
                         var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
 
                         //Does not have a rank
-                        if (GetClaimRewardStatus(claimId, userMintResult) == false)
+                        if (HasClaimedRank(claimId, userMintResult) == false)
                         {
                             GasPrice gasPrice;
                             BigInteger claimRankTransactionFee = 0;
 
                             BigInteger claimRankGas = await _xenBlockchainController.EstimateGasToClaim(mintAccount.Address, termDays);
                             BigInteger transferGas = await _blockchainController.EstimateCoinTransferGas(mainAccount.Address, mintAccount.Address, claimRankGas);
-                            
+
                             var seedAccountBalance = await _blockchainController.Getbalance(mainAccount.Address);
                             var mintAccountBalance = await _blockchainController.Getbalance(mintAccount.Address);
 
                             while (true)
                             {
                                 gasPrice = await _blockchainController.EstimateGasPriceAsync(_priorityFee);
-                                
+
                                 claimRankTransactionFee = gasPrice.Priority * claimRankGas;
 
                                 var maxFeeWillingToPay = Web3.Convert.ToWei((decimal.Parse(MaxGasCost.Text) / _price));
@@ -566,7 +567,7 @@ namespace XenBot
                             var transaction = await _blockchainController.TransferCoins(_wallet.GetAccount(0), _wallet.GetAccount(claimId).Address, amountToSend, _priorityFee, transferGas, gasPrice);
                             await _xenBlockchainController.WaitForConfirmations(transaction);
                             await _xenBlockchainController.ClaimRank(_wallet.GetAccount(claimId), termDays, claimRankGas, gasPrice);
-                            
+
                             walletsCreated++;
 
                             DateTime claimExpire = DateTime.UtcNow.AddDays(termDays);
@@ -578,13 +579,13 @@ namespace XenBot
                             {
                                 data = await _xenBlockchainController.GetUserMints(address);
                                 tokens = _xenBlockchainController.GetGrossReward((long)data.Rank + 10, (long)data.Amplifier, (long)data.Term, (long)data.EaaRate, (long)data.Rank);
-                                if(tokens > 0)
+                                if (tokens > 0)
                                 {
                                     break;
                                 }
                                 await Task.Delay(2000);
                             }
-                            
+
                             _dataController.UpdateClaimInDB(claimId, _accountId, claimExpire, address, chain, (long)data.Rank, (long)data.Amplifier, (long)data.EaaRate, (long)data.Term, tokens);
                             await Task.Delay(2000);
                         }
@@ -607,7 +608,7 @@ namespace XenBot
                     claimId++;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show(ex.Message);
             }
@@ -686,6 +687,11 @@ namespace XenBot
             cbAccount.IsEnabled = isEnabled;
             btnAddAccount.IsEnabled = isEnabled;
             btnDeleteAccount.IsEnabled = isEnabled;
+        }
+
+        private bool HasClaimedRank(int accountId, UserMintOutputDTO userMintResult)
+        {
+            return userMintResult.Address == _wallet.GetAccount(accountId).Address;
         }
 
         private ClaimRewardResponseStatus GetClaimRewardStatus(int accountId, UserMintOutputDTO userMintResult)
@@ -799,7 +805,7 @@ namespace XenBot
                         var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
 
                         //Does not have a rank
-                        if (GetClaimRewardStatus(claimId, userMintResult) == false)
+                        if (HasClaimedRank(claimId, userMintResult) == false)
                         {
                             notMintedCount++;
                         }
@@ -951,7 +957,9 @@ namespace XenBot
 
                                 var userMintResult = await _xenBlockchainController.GetUserMints(mintAccount.Address);
 
-                                if (GetClaimRewardStatus(expiredAccount.Id, userMintResult))
+                                ClaimRewardResponseStatus status = GetClaimRewardStatus(expiredAccount.Id, userMintResult);
+
+                                if (status == ClaimRewardResponseStatus.Matured)
                                 {
                                     GasPrice gasPrice;
                                     BigInteger mintRewardTransactionFee = 0;
@@ -1006,9 +1014,21 @@ namespace XenBot
 
                                     _dataController.DeleteClaimByIdAndChain(expiredAccount.Id, chain, _accountId);
                                 }
-                                else
+                                else if(status == ClaimRewardResponseStatus.NotMatured)
+                                {
+                                    var term = userMintResult.Term;
+                                    var matureDate = UnixTimeStampToDateTime((long)userMintResult.MaturityTs);
+                                    var address = userMintResult.Address;
+                                    var tokens = _xenBlockchainController.GetGrossReward(_globalRank, (long)userMintResult.Amplifier, (long)userMintResult.Term, (long)userMintResult.EaaRate, (long)userMintResult.Rank);
+                                    _dataController.UpdateClaimInDB(expiredAccount.Id, _accountId, UnixTimeStampToDateTime((long)userMintResult.MaturityTs), address, chain, (long)userMintResult.Rank, (long)userMintResult.Amplifier, (long)userMintResult.EaaRate, (long)userMintResult.Term, tokens);
+                                }
+                                else if(status == ClaimRewardResponseStatus.NotFound)
                                 {
                                     _dataController.DeleteClaimByIdAndChain(expiredAccount.Id, chain, _accountId);
+                                }
+                                else
+                                {
+                                    throw new Exception("Could not determine status of mint");
                                 }
 
                                 LoadTotals();
