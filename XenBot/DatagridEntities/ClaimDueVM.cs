@@ -12,8 +12,8 @@ namespace XenBot.DatagridEntities
         public string Due { get; set; }
         public string Account { get; set; }
         public string Chain { get; set; }
-        public int Count { get; set; }
-        public long ExpectedTokens { get; set; }
+        public string Count { get; set; }
+        public string Tokens { get; set; }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
