@@ -191,13 +191,9 @@ namespace XenBot
         {
             DateTime now = DateTime.Now;
 
-            TimeZoneInfo localTimeZone = TimeZoneInfo.Local;
-            now = TimeZoneInfo.ConvertTimeToUtc(now, localTimeZone);
-            datetime = TimeZoneInfo.ConvertTimeToUtc(datetime, localTimeZone);
-
             int days = (datetime - now).Days;
 
-            if(days > 7)
+            if(days > 8)
             {
                 throw new Exception("Could not calculate due date");
             }
@@ -246,16 +242,17 @@ namespace XenBot
             {
                 return "Tomorrow";
             }
+            else if (now < datetime && now.Day == datetime.Day && now.Year == datetime.Year)
+            {
+                return "Today";
+            }
+            else if(now >= datetime)
+            {
+                return "Now";
+            }
             else
             {
-                if(now >= datetime)
-                {
-                    return "Now";
-                }
-                else
-                {
-                    return "Today";
-                }
+                throw new Exception("Could not calculate Claim Due");
             }
         }
 
